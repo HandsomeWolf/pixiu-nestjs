@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model SystemMenus {
+  id         Int      @id @default(autoincrement())
+  name       String
+  path       String
+  icon       String?
+  sort       Int      @default(100)
+  parent_id  Int
+  type       Int
+
+  meta       Json?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("system_menus")
+}
+
+model SystemUsers {
+  id         Int       @id @default(autoincrement())
+  username   String    @unique
+  password   String
+  name       String?
+  expired    DateTime?
+  email      String?
+  phone      String?
+  avatar     String?
+  status     Int       @default(0)
+  union_id   String?
+  open_id    String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  @@map("system_users")
+}
