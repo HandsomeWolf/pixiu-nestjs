@@ -1,74 +1,47 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
-import {
-  WinstonModule,
-  utilities as nestWinstonModuleUtilities,
-} from 'nest-winston';
+import { WinstonModule } from 'nest-winston';
 import { SystemModule } from './modules/system/system.module';
-import { AiModule } from './modules/ai/ai.module';
-import * as winston from 'winston';
-import * as DailyRotateFile from 'winston-daily-rotate-file';
-
-const isDev = process.env.NODE_ENV === 'development';
-
-const createDailyRotateTransport = (level: string, filename: string) => {
-  return new DailyRotateFile({
-    dirname: './logs',
-    filename: `${filename}-%DATE%.log`,
-    datePattern: 'YYYY-MM-DD',
-    zippedArchive: true,
-    maxSize: '20m',
-    maxFiles: '14d',
-    level: level,
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      nestWinstonModuleUtilities.format.nestLike('MyApp', {
-        prettyPrint: true,
-      }),
-    ),
-  });
-};
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { createWinstonModuleOptions } from '@/config/winston.config';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
-    PrismaModule,
-    WinstonModule.forRoot({
-      level: 'silly',
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.ms(),
-            nestWinstonModuleUtilities.format.nestLike('MyApp', {
-              colors: true,
-              prettyPrint: true,
-            }),
-          ),
-        }),
-        ...(isDev
-          ? []
-          : [
-              createDailyRotateTransport('warn', 'error'),
-              createDailyRotateTransport('info', 'app'),
-            ]),
-        // new winston.transports.File({
-        //   filename: 'error.log',
-        //   level: 'error',
-        //   format: winston.format.combine(
-        //     winston.format.timestamp(),
-        //     nestWinstonModuleUtilities.format.nestLike('MyApp', {
-        //       prettyPrint: true,
-        //     }),
-        //   ),
-        // }),
-      ],
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV}`,
     }),
+    WinstonModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: createWinstonModuleOptions,
+    }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 2,
+      },
+      {
+        name: 'medium',
+        ttl: 60 * 1000, // 1 minute
+        limit: 100,
+      },
+    ]),
+    PrismaModule,
+    RedisModule,
     SystemModule,
-    AiModule,
+    RedisModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard, // 将ThrottlerGuard配置为全局守卫
+    },
+  ],
 })
 export class AppModule {}
