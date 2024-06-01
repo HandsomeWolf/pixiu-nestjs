@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./clients/mysql"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model SystemMenus {
+  id             Int     @id @default(autoincrement())
+  name           String
+  path           String
+  component      String?
+  query          String?
+  icon           String?
+  orderNo        Int     @default(500)
+  parentId       Int     @default(0)
+  type           Int // 0:目录 1:菜单 2:按钮
+  status         Int     @default(1) // 菜单状态（0停用 1正常）
+  noClosable     Int     @default(0)
+  hidden         Int     @default(0) // 是否隐藏（0显示 1隐藏）
+  activeMenu     String?
+  guard          String?
+  dot            Int     @default(0)
+  badge          String?
+  isFrame        Int? // 是否为外链  0:否 1:是
+  isCache        Int     @default(0) // 是否缓存 0:否 1:是
+  permissionCode String? // 按钮权限点
+
+  children SystemMenus[] @relation("ParentChild")
+  parent   SystemMenus?  @relation("ParentChild", fields: [parentId], references: [id], onDelete: Cascade)
+
+  systemRoles SystemRoleMenuRelation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_menus")
+}
+
+model SystemUsers {
+  id       Int       @id @default(autoincrement())
+  username String    @unique
+  password String
+  type     Int       @default(0) // 0:系统用户 1:外部用户
+  status   Int       @default(0)
+  orderNo  Int       @default(500)
+  unionId  String?
+  openId   String?
+  loginIP  String?
+  loginAt  DateTime?
+  remark   String? //@db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile SystemUserProfile?
+  logs    SystemLogs[]
+  roles   SystemUserRoleRelation[]
+
+  @@map("system_users")
+}
+
+model SystemUserProfile {
+  id       Int       @id @default(autoincrement())
+  nickname String?
+  email    String?   @unique
+  phone    String?   @unique
+  avatar   String?
+  expired  DateTime?
+  gender   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   SystemUsers @relation(fields: [userId], references: [id])
+  userId Int         @unique
+
+  @@map("system_user_profiles")
+}
+
+model SystemLogs {
+  id        Int      @id @default(autoincrement())
+  api       String
+  type      Int
+  status    Int
+  content   String
+  username  String
+  ip        String
+  createdAt DateTime @default(now())
+
+  user   SystemUsers @relation(fields: [userId], references: [id])
+  userId Int
+
+  @@map("system_logs")
+}
+
+model SystemDictionaryCategory {
+  id          Int     @id @default(autoincrement())
+  name        String
+  orderNo     Int     @default(500)
+  description String?
+  status      Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dictionaryData SystemDictionaryData[]
+
+  @@map("system_dictionary_category")
+}
+
+model SystemDictionaryData {
+  id          Int     @id @default(autoincrement())
+  label       String
+  value       String
+  orderNo     Int     @default(500)
+  description String?
+  status      Int     @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categoryId Int
+  category   SystemDictionaryCategory @relation(fields: [categoryId], references: [id])
+
+  @@map("system_dictionary_data")
+}
+
+model SystemRoles {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  code        String  @unique
+  status      Int     @default(1) // 0: 禁用, 1: 激活
+  description String?
+
+  users SystemUserRoleRelation[]
+  menus SystemRoleMenuRelation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_roles")
+}
+
+// 这里是与用户表的关系定义
+model SystemUserRoleRelation {
+  userId Int
+  roleId Int
+  user   SystemUsers @relation(fields: [userId], references: [id])
+  role   SystemRoles @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId]) // 复合索引
+  @@map("system_user_role_relation")
+}
+
+// 这里是与菜单表的关系定义
+model SystemRoleMenuRelation {
+  roleId Int
+  menuId Int
+  role   SystemRoles @relation(fields: [roleId], references: [id])
+  menu   SystemMenus @relation(fields: [menuId], references: [id])
+
+  @@id([roleId, menuId])
+  @@map("system_role_menu_relation")
+}
+
+model books {
+  id         Int      @id @default(autoincrement())
+  name       String
+  author     String
+  price      Float
+  //分类
+  categoryId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("books")
+}

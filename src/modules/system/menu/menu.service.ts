@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@/prisma/prisma.service';
 import { CreateSystemMenuDto } from '@/modules/system/menu/dto/createSystemMenu.dto';
 import { UpdateSystemMenuDto } from '@/modules/system/menu/dto/updateSystemMenu.dto';
-import { flatToTree, TreeItem } from '@/utils/transformData.utils';
+import { PrismaService } from '@/core/database/prisma/prisma.service';
+import { flatToTree, TreeItem } from '@/utils/fotmat.utils';
 
 @Injectable()
 export class MenuService {
   constructor(private prisma: PrismaService) {}
   async find(): Promise<TreeItem[]> {
-    const menus = await this.prisma.systemMenus.findMany();
+    const menus = await this.prisma.systemMenu.findMany();
     return flatToTree(
       menus.map((menu) => ({
         ...menu,
@@ -21,7 +21,7 @@ export class MenuService {
 
     // 创建菜单项
     const guardAsString = dto.guard?.join(', ');
-    return this.prisma.systemMenus.create({
+    return this.prisma.systemMenu.create({
       data: {
         ...dto,
         guard: guardAsString,
@@ -36,7 +36,7 @@ export class MenuService {
     const guardAsString = dto.guard?.join(', ');
 
     // 执行更新操作
-    return this.prisma.systemMenus.update({
+    return this.prisma.systemMenu.update({
       where: { id: dto.id },
       data: {
         ...dto,
@@ -46,13 +46,13 @@ export class MenuService {
   }
 
   delete(id: number) {
-    return this.prisma.systemMenus.delete({ where: { id } });
+    return this.prisma.systemMenu.delete({ where: { id } });
   }
 
   private async validateParentIdAndType(parentId: number, type: number) {
     let parentMenu = null;
     if (parentId !== 0) {
-      parentMenu = await this.prisma.systemMenus.findUnique({
+      parentMenu = await this.prisma.systemMenu.findUnique({
         where: { id: parentId },
       });
 

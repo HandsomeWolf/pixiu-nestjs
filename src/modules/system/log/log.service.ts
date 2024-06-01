@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@/prisma/prisma.service';
-import { SystemLogs } from '@prisma/client';
 import { QuerySystemLogDto } from '@/modules/system/log/dto/querySystemLog.dto';
+import { SystemLog } from '@prisma/client';
+import { PrismaService } from '@/core/database/prisma/prisma.service';
 
 @Injectable()
 export class LogService {
   constructor(private prisma: PrismaService) {}
 
-  findMany(dto: QuerySystemLogDto): Promise<[SystemLogs[], number]> {
+  findMany(dto: QuerySystemLogDto): Promise<[SystemLog[], number]> {
     const skip = (dto.current - 1) * dto.pageSize;
     const take = dto.pageSize;
     return this.prisma.$transaction([
-      this.prisma.systemLogs.findMany({
+      this.prisma.systemLog.findMany({
         skip,
         take,
         where: {
@@ -20,7 +20,7 @@ export class LogService {
           },
         },
       }),
-      this.prisma.systemLogs.count(),
+      this.prisma.systemLog.count(),
     ]);
   }
 }
