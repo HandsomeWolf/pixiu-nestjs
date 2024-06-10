@@ -1,25 +1,25 @@
-import { Type } from 'class-transformer';
-import { IsNumber, ValidateNested } from 'class-validator';
-import { isValidValueInArray } from '../decorators/isValidValueInArray.decorator';
+import { IsInt, Min } from 'class-validator';
 
-class OrderType {
-  [key: string]: 'asc' | 'desc';
-}
+// class OrderType {
+//   [key: string]: 'asc' | 'desc';
+// }
 
 export class PaginationDto {
-  @IsNumber()
-  @Type(() => Number)
-  page: number = 1;
+  @IsInt()
+  @Min(1)
+  current: number = 1;
 
-  @IsNumber()
-  @Type(() => Number)
-  size: number = 10;
+  @IsInt()
+  @Min(1)
+  pageSize: number = 10;
 
-  @Type(() => OrderType)
-  @ValidateNested()
-  @isValidValueInArray(['asc', 'desc'])
-  order: OrderType;
-
-  @Type(() => String)
-  sort: string;
+  // @Type(() => OrderType)
+  // @ValidateNested()
+  // @isValidValueInArray(['asc', 'desc'])
+  // @IsOptional()
+  // order: OrderType;
+  //
+  // @Type(() => String)
+  // @IsOptional()
+  // sort: string;
 }

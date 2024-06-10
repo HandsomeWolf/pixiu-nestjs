@@ -33,7 +33,6 @@ model SystemMenus {
   badge          String?
   isFrame        Int? // 是否为外链  0:否 1:是
   isCache        Int     @default(0) // 是否缓存 0:否 1:是
-  permissionCode String? // 按钮权限点
 
   children SystemMenus[] @relation("ParentChild")
   parent   SystemMenus?  @relation("ParentChild", fields: [parentId], references: [id], onDelete: Cascade)
@@ -142,8 +141,10 @@ model SystemRoles {
   status      Int     @default(1) // 0: 禁用, 1: 激活
   description String?
 
-  users SystemUserRoleRelation[]
-  menus SystemRoleMenuRelation[]
+  rolesUsers       SystemUserRoleRelation[]
+  rolesMenus       SystemRoleMenuRelation[]
+  rolesPermissions SystemRolePermissionRelation[]
+  rolesPolicies    SystemRolePolicyRelation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -171,17 +172,4 @@ model SystemRoleMenuRelation {
 
   @@id([roleId, menuId])
   @@map("system_role_menu_relation")
-}
-
-model books {
-  id         Int      @id @default(autoincrement())
-  name       String
-  author     String
-  price      Float
-  //分类
-  categoryId Int
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@map("books")
 }

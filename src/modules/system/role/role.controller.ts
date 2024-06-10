@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -14,39 +13,48 @@ import { CreateRoleDto } from '@/modules/system/role/dto/create-role.dto';
 import { Serialize } from '@/core/decorators/serialize.decorator';
 import { PublicRoleDto } from '@/modules/system/role/dto/public-role.dto';
 import { UpdateRoleDto } from '@/modules/system/role/dto/update-role.dto';
+import { QueryRoleDto } from '@/modules/system/role/dto/request/query-role.dto';
+import { Pagination } from '@/common/decorators/pagination.decorator';
+import { IPagination } from '@/common/interface/pagination.interface';
 
-@Controller('role')
+@Controller('/system/role')
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
   @Post()
-  create(@Body() createRoleDto: CreateRoleDto) {
-    console.log('🚀 ~ RoleController ~ create ~ createRoleDto:', createRoleDto);
-    return this.roleService.create(createRoleDto);
+  create(@Body() dto: CreateRoleDto) {
+    return this.roleService.create(dto);
   }
 
   @Get()
-  findAll(
-    @Query('page', new ParseIntPipe({ optional: true })) page: number,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit: number,
-  ) {
-    return this.roleService.findAll(page, limit);
+  // 局部管道可以细粒度的控制
+  // findAll(
+  //   @Query('current', new ParseIntPipe({ optional: true })) page: number,
+  //   @Query('pageSize', new ParseIntPipe({ optional: true })) limit: number,
+  // )
+  // 如果不传参可以不用new
+  // findAll(
+  //   @Query('current', ParseIntPipe) page: number,
+  //   @Query('pageSize', ParseIntPipe) limit: number,
+  // )
+  findAll(@Pagination() pagination: IPagination, @Query() dto: QueryRoleDto) {
+    return this.roleService.findAll(pagination, dto);
   }
-
-  @Get(':id')
-  @Serialize(PublicRoleDto)
-  findOne(@Param('id') id: string) {
-    return this.roleService.findOne(+id);
-  }
-
+  //
+  // @Get(':id')
+  // @Serialize(PublicRoleDto)
+  // findOne(@Param('id') id: string) {
+  //   return this.roleService.findOne(+id);
+  // }
+  //
   @Patch(':id')
   @Serialize(PublicRoleDto)
-  update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
-    return this.roleService.update(+id, updateRoleDto);
+  update(@Param('id') id: number, @Body() updateRoleDto: UpdateRoleDto) {
+    return this.roleService.update(id, updateRoleDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.roleService.remove(+id);
+  remove(@Param('id') id: number) {
+    return this.roleService.remove(id);
   }
 }

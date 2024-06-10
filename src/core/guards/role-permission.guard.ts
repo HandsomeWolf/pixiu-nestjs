@@ -1,9 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSION_KEY } from '../decorators/role-permission.decorator';
-import { UserRepository } from '../../user/user.repository';
-import { RoleService } from '../../role/role.service';
 import { ConfigService } from '@nestjs/config';
+import { UserRepository } from '@/modules/system/user/user.repository';
+import { RoleService } from '@/modules/system/role/role.service';
 
 @Injectable()
 export class RolePermissionGuard implements CanActivate {
@@ -33,13 +33,16 @@ export class RolePermissionGuard implements CanActivate {
     const right = `${cls}:${handler}`;
     const req = context.switchToHttp().getRequest();
     const { username } = req.user;
-    const user = await this.userRepository.findOne(username);
+    const user =
+      await this.userRepository.findOneByUsernameWithRolesAndPermissions(
+        username,
+      );
     if (!user) {
       return false;
     }
-    const roleIds = user.UserRole.map((o) => o.roleId);
+    const roleIds = user.usersRoles.map((o) => o.roleId);
     // 如果是whitelist中的用户对应的roleId，直接返回true
-    const whitelist = this.configService.get('ROLE_ID_WHITELIST');
+    const whitelist = this.configService.get('ROLE_WHITELIST_ID');
     if (whitelist) {
       const whitelistArr = whitelist.split(',');
       // 判断whitelistArr中包含roleIds中的数据，则返回true
@@ -51,7 +54,7 @@ export class RolePermissionGuard implements CanActivate {
     const permissions = await this.roleService.findAllByIds(roleIds);
 
     const permissionsArr = permissions
-      .map((o) => o.RolePermissions.map((o) => o.permission.name))
+      .map((o) => o.rolesPermissions.map((o) => o.permission.name))
       .reduce((acc, cur) => {
         // 需要对结果进行去重
         return [...new Set([...acc, ...cur])];

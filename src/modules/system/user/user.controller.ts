@@ -4,27 +4,30 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 
-import { CreateUserDto } from '@/modules/system/user/dto/create-user.dto';
 import { UserService } from '@/modules/system/user/user.service';
 import { Serialize } from '@/core/decorators/serialize.decorator';
-import { PublicUserDto } from '@/modules/system/auth/dto/public-user.dto';
 import { Permission, Read } from '@/core/decorators/role-permission.decorator';
 import { AuthGuard } from '@nestjs/passport';
 import { RolePermissionGuard } from '@/core/guards/role-permission.guard';
 import { PolicyGuard } from '@/core/guards/policy.guard';
-import { PublicUpdateUserDto } from '@/modules/system/user/dto/public-update-user.dto';
-import { UpdateUserDto } from '@/modules/system/user/dto/update-user.dto';
+import { CreateUserDto } from '@/modules/system/user/dto/request/create-user.dto';
+import { PublicUpdateUserDto } from '@/modules/system/user/dto/response/public-update-user.dto';
+import { UpdateUserDto } from '@/modules/system/user/dto/request/update-user.dto';
+import { PublicUserDto } from '@/modules/system/user/dto/response/public-user.dto';
+import { Pagination } from '@/common/decorators/pagination.decorator';
+import { IPagination } from '@/common/interface/pagination.interface';
+import { QueryUserDto } from '@/modules/system/user/dto/request/query-user.dto';
+import { UpdateProfileDto } from '@/modules/system/user/dto/request/update-profile.dto';
 
-@Controller('user')
+@Controller('system/user')
 @UseGuards(AuthGuard('jwt'), RolePermissionGuard, PolicyGuard)
-@Permission('user')
+@Permission('systemUser')
 export class UserController {
   constructor(private userService: UserService) {}
 
@@ -36,11 +39,9 @@ export class UserController {
 
   @Get()
   @Read()
-  findAll(
-    @Query('page', new ParseIntPipe({ optional: true })) page,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit,
-  ) {
-    return this.userService.findAll(page, limit);
+  @Serialize(PublicUserDto)
+  findAll(@Pagination() pagination: IPagination, @Query() dto: QueryUserDto) {
+    return this.userService.findAll(pagination, dto);
   }
 
   @Get(':username')
@@ -54,8 +55,16 @@ export class UserController {
     return this.userService.update(updateUserDto);
   }
 
+  @Patch(':id')
+  updateUserProfile(
+    @Param('id') id: number,
+    @Body() updateUserProfileDto: UpdateProfileDto,
+  ) {
+    return this.userService.updateProfile(id, updateUserProfileDto);
+  }
+
   @Delete(':id')
-  delete(@Param('id') id: string) {
+  delete(@Param('id') id: number) {
     return this.userService.delete(id);
   }
 }

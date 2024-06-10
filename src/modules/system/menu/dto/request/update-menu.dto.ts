@@ -1,10 +1,8 @@
 import { IsNotEmpty, IsNumber } from 'class-validator';
-import { CreateSystemMenuDto } from '@/modules/system/menu/dto/createSystemMenu.dto';
 import { OmitType } from '@nestjs/mapped-types';
+import { CreateMenuDto } from '@/modules/system/menu/dto/request/create-menu.dto';
 
-export class UpdateSystemMenuDto extends OmitType(CreateSystemMenuDto, [
-  'parentId',
-]) {
+export class UpdateMenuDto extends OmitType(CreateMenuDto, ['parentId']) {
   @IsNotEmpty()
   @IsNumber()
   id: number;

@@ -57,7 +57,7 @@ import { ConfigModule } from '@nestjs/config';
             otherwise: Joi.optional(),
           }),
         ROLE_DEFAULT_ID: Joi.number().default(4), // 角色配置
-        ROLE_WHITELIST_ID: Joi.number().default(2),
+        ROLE_WHITELIST_ID: Joi.string().default('2'),
       }),
     }),
   ],

@@ -1,77 +1,210 @@
 import { Injectable } from '@nestjs/common';
-import { CreateSystemMenuDto } from '@/modules/system/menu/dto/createSystemMenu.dto';
-import { UpdateSystemMenuDto } from '@/modules/system/menu/dto/updateSystemMenu.dto';
+import { PrismaClient } from '@prisma/client';
+import { CreateMenuDto } from '@/modules/system/menu/dto/request/create-menu.dto';
+import { UpdateMenuDto } from '@/modules/system/menu/dto/request/update-menu.dto';
 import { PrismaService } from '@/core/database/prisma/prisma.service';
-import { flatToTree, TreeItem } from '@/utils/fotmat.utils';
 
 @Injectable()
 export class MenuService {
-  constructor(private prisma: PrismaService) {}
-  async find(): Promise<TreeItem[]> {
-    const menus = await this.prisma.systemMenu.findMany();
-    return flatToTree(
-      menus.map((menu) => ({
-        ...menu,
-        guard: menu.guard ? menu.guard.split(', ') : [], // 将字符串转换回数组
-      })),
-    );
-  }
-  async create(dto: CreateSystemMenuDto) {
-    await this.validateParentIdAndType(dto.parentId, dto.type);
+  constructor(private prismaService: PrismaService) {}
 
-    // 创建菜单项
-    const guardAsString = dto.guard?.join(', ');
-    return this.prisma.systemMenu.create({
+  async createNested(
+    dto: CreateMenuDto,
+    prismaClient: PrismaClient,
+    parentId?: number,
+  ) {
+    const { meta, children, ...restData } = dto;
+    const parent = await prismaClient.systemMenu.create({
       data: {
-        ...dto,
-        guard: guardAsString,
+        parentId,
+        ...restData,
+        meta: {
+          create: meta,
+        },
+      },
+    });
+
+    if (children && children.length) {
+      const childData = await Promise.all(
+        children.map((child) =>
+          this.createNested(child, prismaClient, parent.id),
+        ),
+      );
+      // TODO find->include
+      parent['children'] = childData;
+    }
+
+    return parent;
+  }
+  async create(createMenuDto: CreateMenuDto) {
+    const data = await this.createNested(createMenuDto, this.prismaService);
+    // tenantId -> menu -> 前端Menu不多 -> 一次性查询所有的menu
+    return this.prismaService.systemMenu.findUnique({
+      where: {
+        id: data.id,
+      },
+      include: {
+        meta: true,
+        children: {
+          include: {
+            meta: true,
+            children: true,
+          },
+        },
       },
     });
   }
 
-  async update(dto: UpdateSystemMenuDto) {
-    await this.validateParentIdAndType(dto.parentId, dto.type);
+  findAll(page: number = 1, limit: number = 10, args?: any) {
+    const skip = (page - 1) * limit;
 
-    // 如果guard字段存在，则将数组转换为字符串
-    const guardAsString = dto.guard?.join(', ');
+    let pagination: any = {
+      skip,
+      take: limit,
+    };
+    if (limit === -1) {
+      pagination = {};
+    }
 
-    // 执行更新操作
-    return this.prisma.systemMenu.update({
-      where: { id: dto.id },
-      data: {
-        ...dto,
-        guard: guardAsString,
+    const includeArg = {
+      Meta: true,
+      children: {
+        include: {
+          Meta: true,
+          children: true,
+        },
+      },
+      ...(args || {}),
+    };
+    return this.prismaService.systemMenu.findMany({
+      ...pagination,
+      include: includeArg,
+    });
+  }
+
+  findOne(id: number) {
+    return this.prismaService.systemMenu.findUnique({
+      where: {
+        id: id,
+      },
+      include: {
+        meta: true,
+        children: {
+          include: {
+            meta: true,
+            children: true,
+          },
+        },
       },
     });
   }
 
-  delete(id: number) {
-    return this.prisma.systemMenu.delete({ where: { id } });
-  }
-
-  private async validateParentIdAndType(parentId: number, type: number) {
-    let parentMenu = null;
-    if (parentId !== 0) {
-      parentMenu = await this.prisma.systemMenu.findUnique({
-        where: { id: parentId },
+  async update(id: number, updateMenuDto: UpdateMenuDto) {
+    // menu -> children
+    const { children, meta, ...restData } = updateMenuDto;
+    return this.prismaService.$transaction(async (prisma: PrismaClient) => {
+      await prisma.systemMenu.update({
+        where: {
+          id: id,
+        },
+        data: {
+          ...restData,
+          meta: {
+            update: meta,
+          },
+        },
       });
 
-      if (!parentMenu) {
-        throw new Error('父级菜单不存在');
+      // 判断是否传入的数据有children
+      if (children && children.length > 0) {
+        // 可能有新增，可能有删除
+        const menuIds = (await this.collectMenuIds(id)).filter((o) => o !== id);
+
+        await prisma.systemMenuMeta.deleteMany({
+          where: {
+            menuId: {
+              in: menuIds,
+            },
+          },
+        });
+
+        await prisma.systemMenu.deleteMany({
+          where: {
+            id: {
+              in: menuIds,
+            },
+          },
+        });
+        await Promise.all(
+          children.map((child) => {
+            return this.createNested(child, prisma, id);
+          }),
+        );
+      }
+
+      return prisma.systemMenu.findUnique({
+        where: {
+          id: id,
+        },
+        include: {
+          meta: true,
+          children: {
+            include: {
+              meta: true,
+              children: true,
+            },
+          },
+        },
+      });
+    });
+  }
+
+  async collectMenuIds(id) {
+    const idsToDelete = [];
+    idsToDelete.push(id);
+    const menu = await this.prismaService.systemMenu.findUnique({
+      where: {
+        id: id,
+      },
+      include: {
+        children: true,
+      },
+    });
+
+    if (menu.children) {
+      const childMenuIds = await Promise.all(
+        menu.children.map((child) => this.collectMenuIds(child.id)),
+      );
+
+      for (const childIds of childMenuIds) {
+        idsToDelete.push(...childIds);
       }
     }
 
-    if (type === 2 && parentMenu && parentMenu.type !== 1) {
-      throw new Error('菜单只能放在目录下');
-    }
-    if (type === 1 && parentMenu && parentMenu.type !== 1) {
-      throw new Error('目录只能放在目录下');
-    }
-    if (
-      type === 3 &&
-      (parentId === 0 || (parentMenu && parentMenu.type !== 2))
-    ) {
-      throw new Error('按钮必须放在菜单下');
-    }
+    return idsToDelete;
+  }
+
+  async remove(id: number) {
+    const idsToDelete = await this.collectMenuIds(id);
+
+    return this.prismaService.$transaction(async (prisma: PrismaClient) => {
+      // 删除关联表Meta数据
+      await prisma.systemMenuMeta.deleteMany({
+        where: {
+          menuId: {
+            in: idsToDelete,
+          },
+        },
+      });
+      // 删除Menu中的children数据
+      const res = await prisma.systemMenu.deleteMany({
+        where: {
+          id: {
+            in: idsToDelete,
+          },
+        },
+      });
+      return res;
+    });
   }
 }

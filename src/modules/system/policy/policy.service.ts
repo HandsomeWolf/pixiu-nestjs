@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { CreatePolicyDto } from './dto/create-policy.dto';
+import { UpdatePolicyDto } from './dto/update-policy.dto';
 import { PrismaService } from '@/core/database/prisma/prisma.service';
-import { CreatePolicyDto } from '@/modules/system/policy/dto/create-policy.dto';
-import { UpdatePolicyDto } from '@/modules/system/policy/dto/update-policy.dto';
 
 @Injectable()
 export class PolicyService {

@@ -15,17 +15,16 @@ datasource db {
 }
 
 model SystemUser {
-  id       Int       @id @default(autoincrement())
-  username String    @unique
-  password String
-  type     Int       @default(0) // 0:系统用户 1:外部用户
-  status   Int       @default(0)
-  orderNo  Int       @default(500)
-  unionId  String?
-  openId   String?
-  loginIP  String?
-  loginAt  DateTime?
-  remark   String? //@db.VarChar(255)
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  password  String
+  type      Int       @default(0) // 0:系统用户 1:外部用户
+  status    Int       @default(1) // 0:禁用 1:激活
+  sortOrder Int       @default(500)
+  unionId   String?
+  openId    String?
+  loginIP   String?
+  loginAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -45,6 +44,7 @@ model SystemUserProfile {
   avatar   String?
   expired  DateTime?
   gender   Int?
+  remark   String? //@db.VarChar(255)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -56,16 +56,17 @@ model SystemUserProfile {
 }
 
 model SystemRole {
-  id               Int                            @id @default(autoincrement())
-  name             String                         @unique
-  status           Int                            @default(1) // 0: 禁用, 1: 激活
-  description      String?
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  status      Int      @default(1) // 0: 禁用, 1: 激活
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   rolesUsers       SystemUserRoleRelation[]
   rolesMenus       SystemRoleMenuRelation[]
   rolesPermissions SystemRolePermissionRelation[]
   rolesPolicies    SystemRolePolicyRelation[]
-  createdAt        DateTime                       @default(now())
-  updatedAt        DateTime                       @updatedAt
 
   @@map("system_roles")
 }
@@ -87,7 +88,8 @@ model SystemPermission {
   action      String // action: READ, CREATE, UPDATE, DELETE, MANAGE
   description String?
 
-  permissionsRoles    SystemRolePermissionRelation[]
+  permissionsRoles SystemRolePermissionRelation[]
+
   permissionsPolicies SystemPermissionPolicyRelation[]
 
   @@map("system_permissions")
@@ -113,7 +115,7 @@ model SystemPolicy {
   conditions Json?
   args       Json?
 
-  // base64编码字段
+  // base64编码字段，保存的是该model没有id的情况下以上所有的字段总共的内容转为base64编码后的字符串
   encode String @unique
 
   policiesRoles       SystemRolePolicyRelation[]
@@ -157,35 +159,46 @@ model SystemRoleMenuRelation {
 }
 
 model SystemMenu {
-  id             Int     @id @default(autoincrement())
-  name           String
-  path           String
-  component      String?
-  query          String?
-  icon           String?
-  orderNo        Int     @default(500)
-  parentId       Int     @default(0)
-  type           Int // 0:目录 1:菜单 2:按钮
-  status         Int     @default(1) // 菜单状态（0停用 1正常）
-  noClosable     Int     @default(0)
-  hidden         Int     @default(0) // 是否隐藏（0显示 1隐藏）
-  activeMenu     String?
-  guard          String?
-  dot            Int     @default(0)
-  badge          String?
-  isFrame        Int? // 是否为外链  0:否 1:是
-  isCache        Int     @default(0) // 是否缓存 0:否 1:是
-  permissionCode String? // 按钮权限点
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  path      String
+  component String?
 
-  children SystemMenu[] @relation("ParentChild")
-  parent   SystemMenu?  @relation("ParentChild", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId Int?
+  children SystemMenu[] @relation("menu_relation")
+  parent   SystemMenu?  @relation("menu_relation", fields: [parentId], references: [id], onDelete: Cascade)
 
+  meta       SystemMenuMeta?
   menusRoles SystemRoleMenuRelation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("system_menus")
+}
+
+model SystemMenuMeta {
+  id Int @id @default(autoincrement())
+
+  query     String?
+  icon      String?
+  sortOrder Int     @default(500)
+
+  // type       Int // 0:目录 1:菜单 2:按钮
+  status     Int     @default(1) // 菜单状态（0停用 1正常）
+  noClosable Int     @default(0)
+  hidden     Int     @default(0) // 是否隐藏（0显示 1隐藏）
+  activeMenu String?
+  guard      String?
+  dot        Int     @default(0)
+  badge      String?
+  isFrame    Int? // 是否为外链  0:否 1:是
+  isCache    Int     @default(0) // 是否缓存 0:否 1:是
+
+  menuId Int        @unique
+  menu   SystemMenu @relation(fields: [menuId], references: [id])
+
+  @@map("system_menu_meta")
 }
 
 model SystemLog {
@@ -207,7 +220,7 @@ model SystemLog {
 model SystemDictionaryCategory {
   id          Int     @id @default(autoincrement())
   name        String
-  orderNo     Int     @default(500)
+  sortOrder   Int     @default(500)
   description String?
   status      Int     @default(1)
 
@@ -223,7 +236,7 @@ model SystemDictionaryData {
   id          Int     @id @default(autoincrement())
   label       String
   value       String
-  orderNo     Int     @default(500)
+  sortOrder   Int     @default(500)
   description String?
   status      Int     @default(1)
 

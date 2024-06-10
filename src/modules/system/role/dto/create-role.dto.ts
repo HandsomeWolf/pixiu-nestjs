@@ -6,8 +6,9 @@ import {
   IsArray,
   ValidateNested,
 } from 'class-validator';
-import { CreatePermissionDto } from '@/modules/system/permission/dto/create-permission.dto';
 import { CreatePolicyDto } from '@/modules/system/policy/dto/create-policy.dto';
+import { CreatePermissionDto } from '@/modules/system/permission/dto/create-permission.dto';
+import { CreateMenuDto } from '@/modules/system/menu/dto/request/create-menu.dto';
 
 interface PermissionType {
   id?: number;
@@ -76,4 +77,10 @@ export class CreateRoleDto {
   @ValidateNested({ each: true })
   @Type(() => CreatePolicyDto)
   policies?: any;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateMenuDto)
+  menus?: any;
 }

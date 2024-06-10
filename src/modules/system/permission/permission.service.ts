@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { CreatePermissionDto } from '@/modules/system/permission/dto/create-permission.dto';
-import { PermissionRepository } from '@/modules/system/permission/permission.repository';
 import { PrismaService } from '@/core/database/prisma/prisma.service';
 import { UpdatePermissionDto } from '@/modules/system/permission/dto/update-permission.dto';
 
 @Injectable()
 export class PermissionService {
-  constructor(
-    private permissionRepository: PermissionRepository,
-    private prismaService: PrismaService,
-  ) {}
+  constructor(private prismaService: PrismaService) {}
   async create(createPermissionDto: CreatePermissionDto) {
     return await this.prismaService.$transaction(
       async (prisma: PrismaService) => {
@@ -28,7 +24,7 @@ export class PermissionService {
               policy.encode = encode;
             }
             return {
-              Policy: {
+              policy: {
                 connectOrCreate: {
                   where: whereCond,
                   create: {

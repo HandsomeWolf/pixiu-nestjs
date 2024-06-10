@@ -1,19 +1,24 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { CaslAbilityService, IPolicy } from '@/policy/casl-ability.service';
 import { PERMISSION_KEY } from '../decorators/role-permission.decorator';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { PermissionService } from '../../permission/permission.service';
-import { UserRepository } from '../../user/user.repository';
-import { RoleService } from '../../role/role.service';
-import { SharedService } from '../../modules/shared/shared.service';
-import { User } from '@/user/user.entity';
 import { plainToInstance } from 'class-transformer';
+import {
+  CaslAbilityService,
+  IPolicy,
+} from '@/modules/system/policy/casl-ability.service';
+import { PermissionService } from '@/modules/system/permission/permission.service';
+import { UserRepository } from '@/modules/system/user/user.repository';
+import { RoleService } from '@/modules/system/role/role.service';
+import { SharedService } from '@/modules/system/shared/shared.service';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const mapSubjectToClass = (subject: string) => {
   switch (subject.toLowerCase()) {
     case 'user':
-      return User;
+      return prisma.systemUser;
     default:
       return subject;
   }
@@ -63,15 +68,18 @@ export class PolicyGuard implements CanActivate {
     const permissionPolicy = await this.permissionService.findByName(right);
 
     // 3. Policy -> subjects -> 缩小RolePolicy的查询范围
-    const subjects = permissionPolicy.PermissionPolicy.map((policy) => {
-      return policy.Policy.subject;
+    const subjects = permissionPolicy.permissionsPolicies.map((policy) => {
+      return policy.policy.subject;
     });
     // 4. username -> User -> Role -> Policy & subjects 用户已分配接口权限
-    const user = await this.userRepository.findOne(username);
-    const roleIds = user.UserRole.map((role) => role.roleId);
+    const user =
+      await this.userRepository.findOneByUsernameWithRolesAndPermissions(
+        username,
+      );
+    const roleIds = user.usersRoles.map((role) => role.roleId);
     // 判断是否是白名单
     // 如果是whitelist中的用户对应的roleId，直接返回true
-    const whitelist = this.configService.get('ROLE_ID_WHITELIST');
+    const whitelist = this.configService.get('ROLE_WHITELIST_ID');
     if (whitelist) {
       const whitelistArr = whitelist.split(',');
       // 判断whitelistArr中包含roleIds中的数据，则返回true
@@ -83,20 +91,20 @@ export class PolicyGuard implements CanActivate {
     const rolePolicy = await this.roleService.findAllByIds(roleIds);
 
     const rolePolicyFilterBySubjects = rolePolicy.reduce((acc, cur) => {
-      const rolePolicy = cur.RolePolicy.filter((policy) => {
-        return subjects.includes(policy.Policy.subject);
+      const rolePolicy = cur.rolesPolicies.filter((policy) => {
+        return subjects.includes(policy.policy.subject);
       });
       acc.push(...rolePolicy);
       return acc;
     }, []);
 
-    const policies: IPolicy[] = rolePolicyFilterBySubjects.map((o) => o.Policy);
+    const policies: IPolicy[] = rolePolicyFilterBySubjects.map((o) => o.policy);
     user.RolePolicy = rolePolicy;
     delete user.password;
     user.policies = policies;
     user.roleIds = roleIds;
-    user.permissions = user.UserRole.reduce((acc, cur) => {
-      return [...acc, ...cur.Role.RolePermissions];
+    user.permissions = user.usersRoles.reduce((acc, cur) => {
+      return [...acc, ...cur.role.rolesPermissions];
     }, []);
     console.log('🚀 ~ PolicyGuard ~ canActivate ~ user:', user);
     const abilities = await this.caslAbilityService.buildAbility(policies, [
@@ -111,10 +119,10 @@ export class PolicyGuard implements CanActivate {
     }
 
     let allPermissionsGranted = true;
-    const tempPermissionsPolicy = [...permissionPolicy.PermissionPolicy];
+    const tempPermissionsPolicy = [...permissionPolicy.permissionsPolicies];
 
     for (const policy of tempPermissionsPolicy) {
-      const { action, subject, fields } = policy.Policy;
+      const { action, subject, fields } = policy.policy;
 
       let permissionGranted = false;
 

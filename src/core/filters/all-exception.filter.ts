@@ -17,7 +17,6 @@ export class AllExceptionFilter implements ExceptionFilter {
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
-    console.log('🚀 ~ AllExceptionFilter ~ exception:', exception);
     const { httpAdapter } = this.httpAdapterHost;
     const ctx = host.switchToHttp();
     const request = ctx.getRequest();
@@ -28,15 +27,8 @@ export class AllExceptionFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const msg: unknown = exception['response'] || 'Internal Server Error';
-
-    // 加入更多异常错误逻辑
-    // if (exception instanceof QueryFailedError) {
-    //   msg = exception.message;
-    //   // if (exception.driverError.errno && exception.driverError.errno === 1062) {
-    //   //   msg = '唯一索引冲突';
-    //   // }
-    // }
+    const msg: unknown =
+      exception['response'] || exception['message'] || 'Internal Server Error';
 
     const responseBody = {
       headers: request.headers,
@@ -47,11 +39,11 @@ export class AllExceptionFilter implements ExceptionFilter {
       // 还可以加入一些用户信息
       // IP信息
       ip: requestIp.getClientIp(request),
-      exceptioin: exception['name'],
+      exception: exception['name'],
       error: msg,
     };
 
-    this.logger.error('[toimc]', responseBody);
+    this.logger.error('[allExceptionFilter]', responseBody);
     httpAdapter.reply(response, responseBody, httpStatus);
   }
 }

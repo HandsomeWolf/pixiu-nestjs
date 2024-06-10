@@ -4,9 +4,10 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import helmet from 'helmet';
-import * as process from 'process';
 import { ConfigService } from '@nestjs/config';
 import { AllExceptionFilter } from '@/core/filters/all-exception.filter';
+import { HttpExceptionFilter } from '@/core/filters/http-exception.filter';
+import { PrismaExceptionFilter } from '@/core/filters/prisma-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,7 +19,7 @@ async function bootstrap() {
   const prefix = configService.get('APP_API_PREFIX', '/api');
   const version = configService.get<string>('APP_API_VERSION');
 
-  const errorFilterEnabled = configService.get<string>(
+  const errorFilterEnabled = configService.get<boolean>(
     'APP_ERROR_FILTER_ENABLED',
   );
 
@@ -33,9 +34,13 @@ async function bootstrap() {
   if (cors === 'true') {
     app.enableCors();
   }
-  if (errorFilterEnabled === 'true') {
+  if (errorFilterEnabled === true) {
     const httpAdapter = app.get(HttpAdapterHost);
-    app.useGlobalFilters(new AllExceptionFilter(httpAdapter));
+    app.useGlobalFilters(
+      new AllExceptionFilter(httpAdapter),
+      new HttpExceptionFilter(Logger),
+      new PrismaExceptionFilter(),
+    );
   }
 
   app.enableShutdownHooks();
@@ -43,9 +48,12 @@ async function bootstrap() {
   // 在应用级别使用全局管道（Pipes）进行数据验证和转换。
   app.useGlobalPipes(
     new ValidationPipe({
+      // 去掉dto中不存在的字段
       whitelist: true,
+      // 对请求参数进行转换数据类型
       transform: true,
       transformOptions: {
+        // 尝试进行隐式类型转换，以确保数据的正确性。
         enableImplicitConversion: true,
       },
     }),

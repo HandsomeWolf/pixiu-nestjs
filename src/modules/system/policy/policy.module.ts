@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { PolicyService } from './policy.service';
 import { PolicyController } from './policy.controller';
-import { CaslAbilityService } from '@/modules/system/policy/casl-ability.service';
+import { CaslAbilityService } from './casl-ability.service';
 
 @Module({
-  providers: [PolicyService, CaslAbilityService],
   controllers: [PolicyController],
+  providers: [PolicyService, CaslAbilityService],
   exports: [CaslAbilityService],
 })
 export class PolicyModule {}

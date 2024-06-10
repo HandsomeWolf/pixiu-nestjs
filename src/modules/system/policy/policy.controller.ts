@@ -1,15 +1,15 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
-  Patch,
   Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
 } from '@nestjs/common';
-import { PolicyService } from '@/modules/system/policy/policy.service';
-import { CreatePolicyDto } from '@/modules/system/policy/dto/create-policy.dto';
-import { UpdatePolicyDto } from '@/modules/system/policy/dto/update-policy.dto';
+import { PolicyService } from './policy.service';
+import { CreatePolicyDto } from './dto/create-policy.dto';
+import { UpdatePolicyDto } from './dto/update-policy.dto';
 
 @Controller('policy')
 export class PolicyController {

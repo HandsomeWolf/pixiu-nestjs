@@ -5,19 +5,19 @@ export class PublicRoleDto extends CreateRoleDto {
   @Transform(({ value }) => {
     return value.map((permission) => permission.Permission.name);
   })
-  @Expose({ name: 'RolePermissions' })
+  @Expose({ name: 'rolesPermissions' })
   permissions: any[];
 
   @Transform(({ value }) => {
     return value.map((value) => {
-      const policy = value.Policy;
+      const policy = value.policy;
       delete policy['encode'];
-      delete value['Policy'];
+      delete value['policy'];
       value.policy = policy;
       // TODO fields, conditions, args Transform
       return value;
     });
   })
-  @Expose({ name: 'RolePolicy' })
+  @Expose({ name: 'rolesPolicies' })
   policies: any[];
 }

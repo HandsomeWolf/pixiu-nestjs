@@ -1,48 +1,57 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
-  ParseIntPipe,
   Post,
-  Put,
-  Version,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
-import { CreateSystemMenuDto } from '@/modules/system/menu/dto/createSystemMenu.dto';
-import { MenuService } from '@/modules/system/menu/menu.service';
-import { UpdateSystemMenuDto } from '@/modules/system/menu/dto/updateSystemMenu.dto';
+import { MenuService } from './menu.service';
+import { CreateMenuDto } from '@/modules/system/menu/dto/request/create-menu.dto';
+import { UpdateMenuDto } from '@/modules/system/menu/dto/request/update-menu.dto';
 
-@Controller('system/menu')
+@Controller('menu')
 export class MenuController {
-  constructor(private menuService: MenuService) {}
-
-  @Get()
-  @Version('1')
-  async find() {
-    return await this.menuService.find();
-  }
-  // @Get()
-  // @Version('2')
-  // findVersion2() {
-  //   return 'find version 2';
-  // }
+  constructor(private readonly menuService: MenuService) {}
 
   @Post()
-  async create(@Body() dto: CreateSystemMenuDto) {
-    await this.menuService.create(dto);
-    return 'find';
+  create(@Body() createMenuDto: CreateMenuDto) {
+    return this.menuService.create(createMenuDto);
   }
 
-  @Put()
-  async update(@Body() dto: UpdateSystemMenuDto) {
-    await this.menuService.update(dto);
-    return 'find';
+  @Get()
+  findAll(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+    @Query('args')
+    args: any,
+  ) {
+    let parsedArgs;
+    if (args) {
+      try {
+        parsedArgs = JSON.parse(args);
+      } catch (error) {
+        throw new BadRequestException('args: 无效的JSON数据格式');
+      }
+    }
+    return this.menuService.findAll(page, limit, parsedArgs);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.menuService.findOne(+id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateMenuDto: UpdateMenuDto) {
+    return this.menuService.update(+id, updateMenuDto);
   }
 
   @Delete(':id')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    this.menuService.delete(id);
-    return 'find';
+  remove(@Param('id') id: string) {
+    return this.menuService.remove(+id);
   }
 }

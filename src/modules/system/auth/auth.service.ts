@@ -4,7 +4,9 @@ import { JwtService } from '@nestjs/jwt';
 
 import argon2 from 'argon2';
 import { UserService } from '@/modules/system/user/user.service';
-import { SigninUserDto } from '@/modules/system/auth/dto/signin-user.dto';
+import { SignInUserDto } from '@/modules/system/auth/dto/request/signin-user.dto';
+import { CreateUserDto } from '@/modules/system/user/dto/request/create-user.dto';
+import { JwtPayloadUser } from '@/common/interface/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -14,9 +16,9 @@ export class AuthService {
     private jwt: JwtService,
   ) {}
   // 登录
-  async signIn(dto: SigninUserDto) {
+  async signIn(dto: SignInUserDto) {
     const { username, password } = dto;
-    const user = await this.userRepository.findUserByUsername(username);
+    const user = await this.userRepository.findOneByUsername(username);
     if (!user) {
       throw new ForbiddenException('用户不存在');
     }
@@ -27,20 +29,22 @@ export class AuthService {
     }
 
     const token = await this.jwt.signAsync({
+      userId: user.id,
       username: user.username,
-    });
+      // roleId: user.usersRoles[0].roleId,
+    } as JwtPayloadUser['user']);
 
     return {
       accessToken: token,
     };
   }
   // 注册
-  async signUp(dto: SigninUserDto) {
-    const { username, password } = dto;
-    const user = await this.userRepository.findUserByUsername(username);
+  async signUp(dto: CreateUserDto) {
+    const { username } = dto;
+    const user = await this.userRepository.findOneByUsername(username);
     if (user) {
       throw new ForbiddenException('用户已存在');
     }
-    return await this.userService.create({ username, password });
+    return await this.userService.create(dto);
   }
 }

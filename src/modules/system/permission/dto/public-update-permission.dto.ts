@@ -7,13 +7,13 @@ export class PublicUpdatePermissionDto extends PartialType(
   CreatePermissionDto,
 ) {
   @Type(() => CreatePolicyDto)
-  @Expose({ name: 'PermissionPolicy' })
+  @Expose({ name: 'permissionsPolicies' })
   @Transform(({ value }) => {
     // 只需要保留除了encode以外的属性
     return value.map((item) => {
-      const policy = item.Policy;
+      const policy = item.policy;
       delete policy['encode'];
-      delete item['Policy'];
+      delete item['policy'];
       item.policy = policy;
       return item;
     });
