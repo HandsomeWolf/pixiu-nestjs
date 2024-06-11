@@ -6,15 +6,35 @@ import {
   IsArray,
   ValidateNested,
 } from 'class-validator';
-import { CreatePolicyDto } from '@/modules/system/policy/dto/create-policy.dto';
-import { CreatePermissionDto } from '@/modules/system/permission/dto/create-permission.dto';
+import {
+  CreatePolicyDto,
+  FieldType,
+} from '@/modules/system/policy/dto/create-policy.dto';
 import { CreateMenuDto } from '@/modules/system/menu/dto/request/create-menu.dto';
+import { CreatePermissionDto } from '@/modules/system/permission/dto/required/create-permission.dto';
 
-interface PermissionType {
+export interface PermissionType {
   id?: number;
   name: string;
   action: string;
   description?: string;
+}
+
+export interface menusType {
+  id?: number;
+  name: string;
+}
+
+export interface policiesType {
+  id?: number;
+  type: number;
+  effect: 'can' | 'cannot';
+  action: string;
+  subject: string;
+  fields?: FieldType;
+  conditions?: FieldType;
+  args?: FieldType;
+  encode?: string;
 }
 
 abstract class Permission {

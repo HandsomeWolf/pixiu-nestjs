@@ -1,125 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePermissionDto } from '@/modules/system/permission/dto/create-permission.dto';
-import { PrismaService } from '@/core/database/prisma/prisma.service';
-import { UpdatePermissionDto } from '@/modules/system/permission/dto/update-permission.dto';
+import { CreatePermissionDto } from '@/modules/system/permission/dto/required/create-permission.dto';
+import { UpdatePermissionDto } from '@/modules/system/permission/dto/required/update-permission.dto';
+import { PermissionRepository } from '@/modules/system/permission/permission.repository';
+import { Pagination } from '@/common/decorators/pagination.decorator';
+import { IPagination } from '@/common/interface/pagination.interface';
 
 @Injectable()
 export class PermissionService {
-  constructor(private prismaService: PrismaService) {}
-  async create(createPermissionDto: CreatePermissionDto) {
-    return await this.prismaService.$transaction(
-      async (prisma: PrismaService) => {
-        const { policies, ...restData } = createPermissionDto;
-
-        const permissionPolicy = {
-          create: (policies || []).map((policy) => {
-            let whereCond;
-            if (policy.id) {
-              whereCond = { id: policy.id };
-            } else {
-              const encode = Buffer.from(JSON.stringify(policy)).toString(
-                'base64',
-              );
-              whereCond = { encode };
-              policy.encode = encode;
-            }
-            return {
-              policy: {
-                connectOrCreate: {
-                  where: whereCond,
-                  create: {
-                    ...policy,
-                  },
-                },
-              },
-            };
-          }),
-        };
-        return prisma.systemPermission.create({
-          data: {
-            ...restData,
-            permissionsPolicies: permissionPolicy,
-          },
-        });
-      },
-    );
+  constructor(private permissionRepository: PermissionRepository) {}
+  async create(dto: CreatePermissionDto) {
+    return this.permissionRepository.create(dto);
   }
 
-  findAll(page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit;
-    return this.prismaService.systemPermission.findMany({
-      skip,
-      take: limit,
-    });
+  findAll(pagination: IPagination) {
+    return this.permissionRepository.findAll(pagination);
   }
 
   findOne(id: number) {
-    return this.prismaService.systemPermission.findUnique({ where: { id } });
+    return this.permissionRepository.findOne(id);
   }
 
   findByName(name: string) {
-    return this.prismaService.systemPermission.findUnique({
-      where: {
-        name,
-      },
-      include: {
-        permissionsPolicies: {
-          include: {
-            policy: true,
-          },
-        },
-      },
-    });
+    return this.permissionRepository.findByName(name);
   }
 
-  update(id: number, updatePermissionDto: UpdatePermissionDto) {
-    return this.prismaService.$transaction(async (prisma: PrismaService) => {
-      const { policies, ...restData } = updatePermissionDto;
-
-      const updatePermission = await prisma.systemPermission.update({
-        where: { id },
-        data: {
-          ...restData,
-          permissionsPolicies: {
-            deleteMany: {},
-            create: (policies || []).map((policy) => {
-              let whereCond;
-              if (policy.id) {
-                whereCond = { id: policy.id };
-              } else {
-                const encode = Buffer.from(JSON.stringify(policy)).toString(
-                  'base64',
-                );
-                whereCond = { encode };
-                policy.encode = encode;
-              }
-              return {
-                policy: {
-                  connectOrCreate: {
-                    where: whereCond,
-                    create: {
-                      ...policy,
-                    },
-                  },
-                },
-              };
-            }),
-          },
-        },
-        include: {
-          permissionsPolicies: {
-            include: {
-              policy: true,
-            },
-          },
-        },
-      });
-
-      return updatePermission;
-    });
+  update(id: number, dto: UpdatePermissionDto) {
+    return this.permissionRepository.update(id, dto);
   }
 
-  remove(id: number) {
-    return this.prismaService.systemPermission.delete({ where: { id } });
+  delete(id: number) {
+    return this.permissionRepository.delete(id);
   }
 }

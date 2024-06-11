@@ -11,18 +11,18 @@ export class PolicyService {
       'base64',
     );
     const data = { ...createPolicyDto, encode };
-    return this.prismaService.systemPolicy.create({ data });
+    return this.prismaService.policy.create({ data });
   }
 
   findAll(page: number = 1, limit: number = 10) {
-    return this.prismaService.systemPolicy.findMany({
+    return this.prismaService.policy.findMany({
       skip: (page - 1) * limit,
       take: limit,
     });
   }
 
   findOne(policyId: number) {
-    return this.prismaService.systemPolicy.findUnique({
+    return this.prismaService.policy.findUnique({
       where: { id: policyId },
     });
   }
@@ -32,13 +32,13 @@ export class PolicyService {
       'base64',
     );
     const data = { ...updatePolicyDto, encode };
-    return this.prismaService.systemPolicy.update({
+    return this.prismaService.policy.update({
       where: { id },
       data: data,
     });
   }
 
   remove(id: number) {
-    return this.prismaService.systemPolicy.delete({ where: { id } });
+    return this.prismaService.policy.delete({ where: { id } });
   }
 }

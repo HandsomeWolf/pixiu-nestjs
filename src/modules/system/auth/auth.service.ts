@@ -31,7 +31,7 @@ export class AuthService {
     const token = await this.jwt.signAsync({
       userId: user.id,
       username: user.username,
-      // roleId: user.usersRoles[0].roleId,
+      roleId: user.roles[0].roleId,
     } as JwtPayloadUser['user']);
 
     return {

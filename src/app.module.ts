@@ -4,7 +4,6 @@ import { RedisModule } from '@/core/redis/redis.module';
 import { ConfigurationModule } from '@/core/configuration/configuration.module';
 import { PrismaModule } from '@/core/database/prisma/prisma.module';
 import { SystemModule } from '@/modules/system/system.module';
-import { TestModule } from './test/test.module';
 
 @Module({
   imports: [
@@ -26,7 +25,6 @@ import { TestModule } from './test/test.module';
     PrismaModule,
     RedisModule,
     SystemModule,
-    TestModule,
   ],
   controllers: [],
   providers: [

@@ -12,6 +12,8 @@ import {
 import { MenuService } from './menu.service';
 import { CreateMenuDto } from '@/modules/system/menu/dto/request/create-menu.dto';
 import { UpdateMenuDto } from '@/modules/system/menu/dto/request/update-menu.dto';
+import { Pagination } from '@/common/decorators/pagination.decorator';
+import { IPagination } from '@/common/interface/pagination.interface';
 
 @Controller('menu')
 export class MenuController {
@@ -24,8 +26,7 @@ export class MenuController {
 
   @Get()
   findAll(
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+    @Pagination() pagination: IPagination,
     @Query('args')
     args: any,
   ) {
@@ -37,7 +38,7 @@ export class MenuController {
         throw new BadRequestException('args: 无效的JSON数据格式');
       }
     }
-    return this.menuService.findAll(page, limit, parsedArgs);
+    return this.menuService.findAll(pagination, parsedArgs);
   }
 
   @Get(':id')

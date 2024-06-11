@@ -14,7 +14,7 @@ datasource db {
   url      = env("DB_MYSQL_URL")
 }
 
-model SystemUser {
+model User {
   id        Int       @id @default(autoincrement())
   username  String    @unique
   password  String
@@ -29,14 +29,14 @@ model SystemUser {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  profile    SystemUserProfile?
-  logs       SystemLog[]
-  usersRoles SystemUserRoleRelation[]
+  profile UserProfile?
+  logs    Log[]
+  roles   UserRoleRelation[]
 
-  @@map("system_users")
+  @@map("users")
 }
 
-model SystemUserProfile {
+model UserProfile {
   id       Int       @id @default(autoincrement())
   nickname String?
   email    String?   @unique
@@ -49,13 +49,13 @@ model SystemUserProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   SystemUser @relation(fields: [userId], references: [id])
-  userId Int        @unique
+  user   User @relation(fields: [userId], references: [id])
+  userId Int  @unique
 
-  @@map("system_user_profiles")
+  @@map("user_profiles")
 }
 
-model SystemRole {
+model Role {
   id          Int      @id @default(autoincrement())
   name        String   @unique
   status      Int      @default(1) // 0: 禁用, 1: 激活
@@ -63,49 +63,49 @@ model SystemRole {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  rolesUsers       SystemUserRoleRelation[]
-  rolesMenus       SystemRoleMenuRelation[]
-  rolesPermissions SystemRolePermissionRelation[]
-  rolesPolicies    SystemRolePolicyRelation[]
+  users       UserRoleRelation[]
+  menus       RoleMenuRelation[]
+  permissions RolePermissionRelation[]
+  policies    RolePolicyRelation[]
 
-  @@map("system_roles")
+  @@map("roles")
 }
 
 // 这里是与用户表的关系定义
-model SystemUserRoleRelation {
+model UserRoleRelation {
   userId Int
   roleId Int
-  user   SystemUser @relation(fields: [userId], references: [id])
-  role   SystemRole @relation(fields: [roleId], references: [id])
+  user   User @relation(fields: [userId], references: [id])
+  role   Role @relation(fields: [roleId], references: [id])
 
   @@id([userId, roleId]) // 复合索引
-  @@map("system_user_role_relation")
+  @@map("user_role_relation")
 }
 
-model SystemPermission {
+model Permission {
   id          Int     @id @default(autoincrement())
   name        String  @unique // ControllerName + RouteName -> user:create
   action      String // action: READ, CREATE, UPDATE, DELETE, MANAGE
   description String?
 
-  permissionsRoles SystemRolePermissionRelation[]
+  roles RolePermissionRelation[]
 
-  permissionsPolicies SystemPermissionPolicyRelation[]
+  policies PermissionPolicyRelation[]
 
-  @@map("system_permissions")
+  @@map("permissions")
 }
 
-model SystemRolePermissionRelation {
+model RolePermissionRelation {
   roleId       Int
   permissionId Int
-  role         SystemRole       @relation(fields: [roleId], references: [id])
-  permission   SystemPermission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
 
   @@id([roleId, permissionId])
-  @@map("system_role_permissions_relation")
+  @@map("role_permissions_relation")
 }
 
-model SystemPolicy {
+model Policy {
   id         Int    @id @default(autoincrement())
   type       Int // 类型标识，0-json,1-mongo,2-function
   effect     String // 'can' | 'cannot'
@@ -114,70 +114,68 @@ model SystemPolicy {
   fields     Json? // 字段列表, {type, data}
   conditions Json?
   args       Json?
+  encode     String @unique
 
-  // base64编码字段，保存的是该model没有id的情况下以上所有的字段总共的内容转为base64编码后的字符串
-  encode String @unique
+  roles       RolePolicyRelation[]
+  permissions PermissionPolicyRelation[]
 
-  policiesRoles       SystemRolePolicyRelation[]
-  policiesPermissions SystemPermissionPolicyRelation[]
-
-  @@map("system_policy")
+  @@map("policy")
 }
 
 // Role -> Policy 角色所拥有的策略权限
-model SystemRolePolicyRelation {
+model RolePolicyRelation {
   roleId   Int
   policyId Int
-  role     SystemRole   @relation(fields: [roleId], references: [id])
-  policy   SystemPolicy @relation(fields: [policyId], references: [id])
+  role     Role   @relation(fields: [roleId], references: [id])
+  policy   Policy @relation(fields: [policyId], references: [id])
 
   @@id([roleId, policyId])
-  @@map("system_role_policies_relation")
+  @@map("role_policies_relation")
 }
 
 // Permission -> Policy 路由级别所需要的策略权限
-model SystemPermissionPolicyRelation {
+model PermissionPolicyRelation {
   permissionId Int
   policyId     Int
 
-  permission SystemPermission @relation(fields: [permissionId], references: [id])
-  policy     SystemPolicy     @relation(fields: [policyId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+  policy     Policy     @relation(fields: [policyId], references: [id])
 
   @@id([permissionId, policyId])
-  @@map("system_permission_polices_relation")
+  @@map("permission_polices_relation")
 }
 
 // 这里是与菜单表的关系定义
-model SystemRoleMenuRelation {
+model RoleMenuRelation {
   roleId Int
   menuId Int
-  role   SystemRole @relation(fields: [roleId], references: [id])
-  menu   SystemMenu @relation(fields: [menuId], references: [id])
+  role   Role @relation(fields: [roleId], references: [id])
+  menu   Menu @relation(fields: [menuId], references: [id])
 
   @@id([roleId, menuId])
-  @@map("system_role_menu_relation")
+  @@map("role_menu_relation")
 }
 
-model SystemMenu {
+model Menu {
   id        Int     @id @default(autoincrement())
   name      String  @unique
   path      String
   component String?
 
   parentId Int?
-  children SystemMenu[] @relation("menu_relation")
-  parent   SystemMenu?  @relation("menu_relation", fields: [parentId], references: [id], onDelete: Cascade)
+  children Menu[] @relation("menu_relation")
+  parent   Menu?  @relation("menu_relation", fields: [parentId], references: [id], onDelete: Cascade)
 
-  meta       SystemMenuMeta?
-  menusRoles SystemRoleMenuRelation[]
+  meta  MenuMeta?
+  roles RoleMenuRelation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("system_menus")
+  @@map("menus")
 }
 
-model SystemMenuMeta {
+model MenuMeta {
   id Int @id @default(autoincrement())
 
   query     String?
@@ -195,13 +193,13 @@ model SystemMenuMeta {
   isFrame    Int? // 是否为外链  0:否 1:是
   isCache    Int     @default(0) // 是否缓存 0:否 1:是
 
-  menuId Int        @unique
-  menu   SystemMenu @relation(fields: [menuId], references: [id])
+  menuId Int  @unique
+  menu   Menu @relation(fields: [menuId], references: [id])
 
-  @@map("system_menu_meta")
+  @@map("menu_meta")
 }
 
-model SystemLog {
+model Log {
   id        Int      @id @default(autoincrement())
   api       String
   type      Int
@@ -211,13 +209,13 @@ model SystemLog {
   ip        String
   createdAt DateTime @default(now())
 
-  user   SystemUser @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id])
   userId Int
 
-  @@map("system_logs")
+  @@map("logs")
 }
 
-model SystemDictionaryCategory {
+model DictionaryCategory {
   id          Int     @id @default(autoincrement())
   name        String
   sortOrder   Int     @default(500)
@@ -227,12 +225,12 @@ model SystemDictionaryCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  dictionaryData SystemDictionaryData[]
+  dictionaryData DictionaryData[]
 
-  @@map("system_dictionary_category")
+  @@map("dictionary_category")
 }
 
-model SystemDictionaryData {
+model DictionaryData {
   id          Int     @id @default(autoincrement())
   label       String
   value       String
@@ -244,7 +242,7 @@ model SystemDictionaryData {
   updatedAt DateTime @updatedAt
 
   categoryId Int
-  category   SystemDictionaryCategory @relation(fields: [categoryId], references: [id])
+  category   DictionaryCategory @relation(fields: [categoryId], references: [id])
 
-  @@map("system_dictionary_data")
+  @@map("dictionary_data")
 }

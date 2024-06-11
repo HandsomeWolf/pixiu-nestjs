@@ -1,6 +1,6 @@
 import { IsIn, IsInt, IsOptional, IsString, ValidateIf } from 'class-validator';
 
-type FieldType = string | string[] | Record<string, any>;
+export type FieldType = string | string[] | Record<string, any>;
 
 export class CreatePolicyDto {
   @IsInt()
@@ -35,4 +35,7 @@ export class CreatePolicyDto {
   @ValidateIf((o) => !o.id)
   @IsOptional()
   args?: FieldType;
+
+  @IsOptional()
+  encode: string;
 }

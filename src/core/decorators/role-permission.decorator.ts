@@ -1,8 +1,9 @@
 import { SetMetadata } from '@nestjs/common';
-import { Action } from '../enum/actions.enum';
+import { Action } from '@/core/enum/actions.enum';
 import { Reflector } from '@nestjs/core';
 
-export const PERMISSION_KEY = 'permission';
+export const PERMISSION_KEY = 'permissions';
+const reflector = new Reflector();
 
 const accumulateMetadata = (key: string, permission: string): any => {
   return (
@@ -10,7 +11,6 @@ const accumulateMetadata = (key: string, permission: string): any => {
     propertyKey?: string | symbol,
     descriptor?: TypedPropertyDescriptor<any>,
   ) => {
-    const reflector = new Reflector();
     // 针对于方法的 ->function
     if (descriptor && descriptor.value) {
       const existingPermissions = reflector.get(key, descriptor.value) || [];
@@ -28,14 +28,14 @@ const accumulateMetadata = (key: string, permission: string): any => {
 export const Permission = (permission: string) =>
   accumulateMetadata(PERMISSION_KEY, permission);
 
-export const Create = () =>
+export const CreatePermission = () =>
   accumulateMetadata(PERMISSION_KEY, Action.Create.toLocaleLowerCase());
 
-export const Update = () =>
+export const UpdatePermission = () =>
   accumulateMetadata(PERMISSION_KEY, Action.Update.toLocaleLowerCase());
 
-export const Read = () =>
+export const ReadPermission = () =>
   accumulateMetadata(PERMISSION_KEY, Action.Read.toLocaleLowerCase());
 
-export const Delete = () =>
+export const DeletePermission = () =>
   accumulateMetadata(PERMISSION_KEY, Action.Delete.toLocaleLowerCase());

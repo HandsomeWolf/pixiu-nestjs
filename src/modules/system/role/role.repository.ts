@@ -1,18 +1,91 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/core/database/prisma/prisma.service';
-import { CreateRoleDto } from '@/modules/system/role/dto/create-role.dto';
-import { UpdateRoleDto } from '@/modules/system/role/dto/update-role.dto';
+
+import { IPagination } from '@/common/interface/pagination.interface';
+import { QueryRoleDto } from '@/modules/system/role/dto/request/query-role.dto';
+import {
+  CreateRoleDto,
+  PermissionType,
+} from '@/modules/system/role/dto/request/create-role.dto';
+import { UpdateRoleDto } from '@/modules/system/role/dto/request/update-role.dto';
 
 @Injectable()
 export class RoleRepository {
   constructor(protected prisma: PrismaService) {}
 
+  async findAll(pagination: IPagination, dto: QueryRoleDto) {
+    const { skip, take, current, pageSize } = pagination;
+
+    // 构建查询条件，仅当值存在时才添加到where子句中
+    const where = {};
+    if (dto.name) {
+      where['name'] = {
+        contains: dto.name,
+      };
+    }
+    if (dto.status) {
+      where['status'] = dto.status;
+    }
+
+    const [roles, total] = await Promise.all([
+      this.prisma.role.findMany({
+        where,
+        skip,
+        take,
+      }),
+      this.prisma.role.count({
+        where,
+      }),
+    ]);
+
+    // 返回数据和分页信息
+    return {
+      data: roles,
+      total,
+      current,
+      pageSize,
+    };
+  }
+
+  async findOne(id: number) {
+    return this.prisma.role.findUnique({
+      where: { id },
+      include: {
+        permissions: {
+          include: {
+            permission: true,
+          },
+        },
+      },
+    });
+  }
+
+  async existsByRoleName(name: string): Promise<boolean> {
+    const count = await this.prisma.role.count({
+      where: { name },
+    });
+    return count > 0;
+  }
+
+  async findAllByExistingRoles(roleIds: number[]) {
+    return this.prisma.role.findMany({
+      where: {
+        id: {
+          in: roleIds,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
+
   async create(createRoleDto: CreateRoleDto) {
     return await this.prisma.$transaction(async (prisma: PrismaService) => {
-      const { permissions, policies, ...restData } = createRoleDto;
+      const { permissions, policies, menus, ...roleData } = createRoleDto;
 
-      const rolesPermissions = {
-        create: (permissions || []).map((permission) => ({
+      const rolePermissions = {
+        create: ((permissions as PermissionType[]) || []).map((permission) => ({
           permission: {
             connectOrCreate: {
               where: {
@@ -26,9 +99,22 @@ export class RoleRepository {
         })),
       };
 
-      const rolesPolicies = {
+      const roleMenus = {
+        create: (menus || []).map((menu) => {
+          const whereCond = menu?.id ? { id: menu.id } : { name: menu.name };
+          return {
+            menu: {
+              connect: {
+                ...whereCond,
+              },
+            },
+          };
+        }),
+      };
+
+      const rolePolicies = {
         create: (policies || []).map((policy) => {
-          let whereCond: { id?: any; encode?: string };
+          let whereCond;
           if (policy.id) {
             whereCond = { id: policy.id };
           } else {
@@ -38,12 +124,13 @@ export class RoleRepository {
             whereCond = { encode };
             policy.encode = encode;
           }
+
           return {
             policy: {
               connectOrCreate: {
                 where: whereCond,
                 create: {
-                  ...policy,
+                  policy,
                 },
               },
             },
@@ -51,30 +138,31 @@ export class RoleRepository {
         }),
       };
 
-      return prisma.systemRole.create({
+      return prisma.role.create({
         data: {
-          ...restData,
-          rolesPermissions,
-          rolesPolicies,
+          ...roleData,
+          permissions: rolePermissions,
+          policies: rolePolicies,
+          menus: roleMenus,
         },
       });
     });
   }
 
   async findAllByIds(ids: number[]) {
-    return this.prisma.systemRole.findMany({
+    return this.prisma.role.findMany({
       where: {
         id: {
           in: ids,
         },
       },
       include: {
-        rolesPermissions: {
+        permissions: {
           include: {
             permission: true,
           },
         },
-        rolesPolicies: {
+        policies: {
           include: {
             policy: true,
           },
@@ -83,16 +171,9 @@ export class RoleRepository {
     });
   }
 
-  async existsByRoleName(name: string): Promise<boolean> {
-    const count = await this.prisma.systemRole.count({
-      where: { name },
-    });
-    return count > 0;
-  }
-
   async update(id: number, dto: UpdateRoleDto) {
     return this.prisma.$transaction(async (prisma: PrismaService) => {
-      const { permissions, policies, ...restData } = dto;
+      const { permissions, policies, menus, ...restData } = dto;
 
       const data: any = {};
 
@@ -103,7 +184,7 @@ export class RoleRepository {
           let data = policy;
           if (policy.id) {
             whereCond = { id: policy.id };
-            data = await prisma.systemPolicy.findUnique({
+            data = await this.prisma.policy.findUnique({
               where: { id: policy.id },
             });
           } else {
@@ -126,7 +207,7 @@ export class RoleRepository {
         }
 
         // role Policies更新
-        data.RolePolicy = {
+        data.rolesPolicies = {
           deleteMany: {},
           create: createArr,
         };
@@ -134,7 +215,7 @@ export class RoleRepository {
 
       // 判断一下是否有传rolePermissions
       if (permissions) {
-        data.RolePolicy = {
+        data.rolesPermissions = {
           deleteMany: {},
           create: (permissions || []).map((permission) => ({
             permission: {
@@ -151,21 +232,42 @@ export class RoleRepository {
         };
       }
 
-      return prisma.systemRole.update({
+      if (menus) {
+        data.rolesMenus = {
+          deleteMany: {},
+          create: (menus || []).map((menu) => {
+            const whereCond = menu?.id ? { id: menu.id } : { name: menu.name };
+            return {
+              menu: {
+                connect: {
+                  ...whereCond,
+                },
+              },
+            };
+          }),
+        };
+      }
+
+      return prisma.role.update({
         where: { id },
         data: {
           ...restData,
           ...data,
         },
         include: {
-          rolesPermissions: {
+          permissions: {
             include: {
               permission: true,
             },
           },
-          rolesPolicies: {
+          policies: {
             include: {
               policy: true,
+            },
+          },
+          menus: {
+            include: {
+              menu: true,
             },
           },
         },
@@ -173,17 +275,25 @@ export class RoleRepository {
     });
   }
 
-  // 批量查找已有的roleId
-  async findAllByExistingRoles(roleIds: number[]) {
-    return this.prisma.systemRole.findMany({
-      where: {
-        id: {
-          in: roleIds,
+  async delete(id: number) {
+    return this.prisma.$transaction(async (prisma: PrismaService) => {
+      // 删除Role相关的关联表的数据
+      await prisma.role.update({
+        where: { id },
+        data: {
+          permissions: {
+            deleteMany: {},
+          },
+          policies: {
+            deleteMany: {},
+          },
+          menus: {
+            deleteMany: {},
+          },
         },
-      },
-      select: {
-        id: true,
-      },
+      });
+      // 删除Role
+      return prisma.role.delete({ where: { id } });
     });
   }
 }

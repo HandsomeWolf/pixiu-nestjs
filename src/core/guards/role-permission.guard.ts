@@ -40,7 +40,7 @@ export class RolePermissionGuard implements CanActivate {
     if (!user) {
       return false;
     }
-    const roleIds = user.usersRoles.map((o) => o.roleId);
+    const roleIds = user.roles.map((o) => o.roleId);
     // 如果是whitelist中的用户对应的roleId，直接返回true
     const whitelist = this.configService.get('ROLE_WHITELIST_ID');
     if (whitelist) {
@@ -54,7 +54,7 @@ export class RolePermissionGuard implements CanActivate {
     const permissions = await this.roleService.findAllByIds(roleIds);
 
     const permissionsArr = permissions
-      .map((o) => o.rolesPermissions.map((o) => o.permission.name))
+      .map((o) => o.permissions.map((o) => o.permission.name))
       .reduce((acc, cur) => {
         // 需要对结果进行去重
         return [...new Set([...acc, ...cur])];

@@ -1,11 +1,11 @@
 import { Expose, Transform } from 'class-transformer';
-import { CreateRoleDto } from './create-role.dto';
+import { CreateRoleDto } from '@/modules/system/role/dto/request/create-role.dto';
 
 export class PublicRoleDto extends CreateRoleDto {
   @Transform(({ value }) => {
     return value.map((permission) => permission.Permission.name);
   })
-  @Expose({ name: 'rolesPermissions' })
+  @Expose({ name: 'permissions' })
   permissions: any[];
 
   @Transform(({ value }) => {
@@ -18,6 +18,6 @@ export class PublicRoleDto extends CreateRoleDto {
       return value;
     });
   })
-  @Expose({ name: 'rolesPolicies' })
+  @Expose({ name: 'policies' })
   policies: any[];
 }

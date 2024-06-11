@@ -26,17 +26,17 @@ export class PolicyController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.policyService.findOne(+id);
+  findOne(@Param('id') id: number) {
+    return this.policyService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePolicyDto: UpdatePolicyDto) {
-    return this.policyService.update(+id, updatePolicyDto);
+  update(@Param('id') id: number, @Body() updatePolicyDto: UpdatePolicyDto) {
+    return this.policyService.update(id, updatePolicyDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.policyService.remove(+id);
+  remove(@Param('id') id: number) {
+    return this.policyService.remove(id);
   }
 }

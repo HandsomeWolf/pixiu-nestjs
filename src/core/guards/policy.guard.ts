@@ -18,7 +18,7 @@ const prisma = new PrismaClient();
 const mapSubjectToClass = (subject: string) => {
   switch (subject.toLowerCase()) {
     case 'user':
-      return prisma.systemUser;
+      return prisma.user;
     default:
       return subject;
   }
@@ -68,7 +68,7 @@ export class PolicyGuard implements CanActivate {
     const permissionPolicy = await this.permissionService.findByName(right);
 
     // 3. Policy -> subjects -> 缩小RolePolicy的查询范围
-    const subjects = permissionPolicy.permissionsPolicies.map((policy) => {
+    const subjects = permissionPolicy.policies.map((policy) => {
       return policy.policy.subject;
     });
     // 4. username -> User -> Role -> Policy & subjects 用户已分配接口权限
@@ -76,7 +76,7 @@ export class PolicyGuard implements CanActivate {
       await this.userRepository.findOneByUsernameWithRolesAndPermissions(
         username,
       );
-    const roleIds = user.usersRoles.map((role) => role.roleId);
+    const roleIds = user.roles.map((role) => role.roleId);
     // 判断是否是白名单
     // 如果是whitelist中的用户对应的roleId，直接返回true
     const whitelist = this.configService.get('ROLE_WHITELIST_ID');
@@ -91,7 +91,7 @@ export class PolicyGuard implements CanActivate {
     const rolePolicy = await this.roleService.findAllByIds(roleIds);
 
     const rolePolicyFilterBySubjects = rolePolicy.reduce((acc, cur) => {
-      const rolePolicy = cur.rolesPolicies.filter((policy) => {
+      const rolePolicy = cur.policies.filter((policy) => {
         return subjects.includes(policy.policy.subject);
       });
       acc.push(...rolePolicy);
@@ -103,8 +103,8 @@ export class PolicyGuard implements CanActivate {
     delete user.password;
     user.policies = policies;
     user.roleIds = roleIds;
-    user.permissions = user.usersRoles.reduce((acc, cur) => {
-      return [...acc, ...cur.role.rolesPermissions];
+    user.permissions = user.roles.reduce((acc, cur) => {
+      return [...acc, ...cur.role.permissions];
     }, []);
     console.log('🚀 ~ PolicyGuard ~ canActivate ~ user:', user);
     const abilities = await this.caslAbilityService.buildAbility(policies, [
@@ -119,7 +119,7 @@ export class PolicyGuard implements CanActivate {
     }
 
     let allPermissionsGranted = true;
-    const tempPermissionsPolicy = [...permissionPolicy.permissionsPolicies];
+    const tempPermissionsPolicy = [...permissionPolicy.policies];
 
     for (const policy of tempPermissionsPolicy) {
       const { action, subject, fields } = policy.policy;

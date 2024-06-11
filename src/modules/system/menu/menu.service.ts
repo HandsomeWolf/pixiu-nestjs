@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
 import { CreateMenuDto } from '@/modules/system/menu/dto/request/create-menu.dto';
-import { UpdateMenuDto } from '@/modules/system/menu/dto/request/update-menu.dto';
 import { PrismaService } from '@/core/database/prisma/prisma.service';
+import { UpdateMenuDto } from '@/modules/system/menu/dto/request/update-menu.dto';
+import { IPagination } from '@/common/interface/pagination.interface';
 
 @Injectable()
 export class MenuService {
@@ -10,11 +10,11 @@ export class MenuService {
 
   async createNested(
     dto: CreateMenuDto,
-    prismaClient: PrismaClient,
+    prismaService: PrismaService,
     parentId?: number,
   ) {
     const { meta, children, ...restData } = dto;
-    const parent = await prismaClient.systemMenu.create({
+    const parent = await prismaService.menu.create({
       data: {
         parentId,
         ...restData,
@@ -25,13 +25,12 @@ export class MenuService {
     });
 
     if (children && children.length) {
-      const childData = await Promise.all(
+      // TODO find->include
+      parent['children'] = await Promise.all(
         children.map((child) =>
-          this.createNested(child, prismaClient, parent.id),
+          this.createNested(child, prismaService, parent.id),
         ),
       );
-      // TODO find->include
-      parent['children'] = childData;
     }
 
     return parent;
@@ -39,7 +38,7 @@ export class MenuService {
   async create(createMenuDto: CreateMenuDto) {
     const data = await this.createNested(createMenuDto, this.prismaService);
     // tenantId -> menu -> 前端Menu不多 -> 一次性查询所有的menu
-    return this.prismaService.systemMenu.findUnique({
+    return this.prismaService.menu.findUnique({
       where: {
         id: data.id,
       },
@@ -55,16 +54,10 @@ export class MenuService {
     });
   }
 
-  findAll(page: number = 1, limit: number = 10, args?: any) {
-    const skip = (page - 1) * limit;
-
-    let pagination: any = {
-      skip,
-      take: limit,
-    };
-    if (limit === -1) {
-      pagination = {};
-    }
+  findAll(pagination: IPagination, args?: any) {
+    // if (pagination.current === -1) {
+    //   pagination = {};
+    // }
 
     const includeArg = {
       Meta: true,
@@ -76,14 +69,14 @@ export class MenuService {
       },
       ...(args || {}),
     };
-    return this.prismaService.systemMenu.findMany({
-      ...pagination,
+    return this.prismaService.menu.findMany({
+      // ...pagination,
       include: includeArg,
     });
   }
 
   findOne(id: number) {
-    return this.prismaService.systemMenu.findUnique({
+    return this.prismaService.menu.findUnique({
       where: {
         id: id,
       },
@@ -102,8 +95,8 @@ export class MenuService {
   async update(id: number, updateMenuDto: UpdateMenuDto) {
     // menu -> children
     const { children, meta, ...restData } = updateMenuDto;
-    return this.prismaService.$transaction(async (prisma: PrismaClient) => {
-      await prisma.systemMenu.update({
+    return this.prismaService.$transaction(async (prisma: PrismaService) => {
+      await prisma.menu.update({
         where: {
           id: id,
         },
@@ -120,7 +113,7 @@ export class MenuService {
         // 可能有新增，可能有删除
         const menuIds = (await this.collectMenuIds(id)).filter((o) => o !== id);
 
-        await prisma.systemMenuMeta.deleteMany({
+        await prisma.menuMeta.deleteMany({
           where: {
             menuId: {
               in: menuIds,
@@ -128,7 +121,7 @@ export class MenuService {
           },
         });
 
-        await prisma.systemMenu.deleteMany({
+        await prisma.menu.deleteMany({
           where: {
             id: {
               in: menuIds,
@@ -142,7 +135,7 @@ export class MenuService {
         );
       }
 
-      return prisma.systemMenu.findUnique({
+      return prisma.menu.findUnique({
         where: {
           id: id,
         },
@@ -162,7 +155,7 @@ export class MenuService {
   async collectMenuIds(id) {
     const idsToDelete = [];
     idsToDelete.push(id);
-    const menu = await this.prismaService.systemMenu.findUnique({
+    const menu = await this.prismaService.menu.findUnique({
       where: {
         id: id,
       },
@@ -187,9 +180,9 @@ export class MenuService {
   async remove(id: number) {
     const idsToDelete = await this.collectMenuIds(id);
 
-    return this.prismaService.$transaction(async (prisma: PrismaClient) => {
+    return this.prismaService.$transaction(async (prisma: PrismaService) => {
       // 删除关联表Meta数据
-      await prisma.systemMenuMeta.deleteMany({
+      await prisma.menuMeta.deleteMany({
         where: {
           menuId: {
             in: idsToDelete,
@@ -197,14 +190,13 @@ export class MenuService {
         },
       });
       // 删除Menu中的children数据
-      const res = await prisma.systemMenu.deleteMany({
+      return prisma.menu.deleteMany({
         where: {
           id: {
             in: idsToDelete,
           },
         },
       });
-      return res;
     });
   }
 }
