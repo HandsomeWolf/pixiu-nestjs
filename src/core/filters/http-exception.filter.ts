@@ -30,16 +30,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message: exception.message || 'Internal server error',
       stack: exception.stack,
     };
-    // TODO：使用工具类统一
     const responseBody = {
       success: false,
       errorCode: httpStatus,
       errorMessage: exception.message || 'Internal server error',
       showType: ErrorShowType.ERROR_MESSAGE,
-      data: null,
     };
+
     this.logger.error('[HttpExceptionFilter]', errorInfo);
-    console.log(response, responseBody, httpStatus);
     httpAdapter.reply(response, responseBody, httpStatus);
   }
 }

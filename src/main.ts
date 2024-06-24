@@ -39,7 +39,7 @@ async function bootstrap() {
     app.useGlobalFilters(
       new AllExceptionFilter(httpAdapter),
       new HttpExceptionFilter(httpAdapter),
-      new PrismaExceptionFilter(),
+      new PrismaExceptionFilter(httpAdapter),
     );
   }
 

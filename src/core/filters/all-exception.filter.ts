@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 
-import * as requestIp from 'request-ip';
 import { ErrorShowType } from '@/core/enum/type.enum';
 
 @Catch()
@@ -31,18 +30,19 @@ export class AllExceptionFilter implements ExceptionFilter {
     const errorMessage: unknown =
       exception['response'] || exception['message'] || 'Internal Server Error';
 
+    const clientIp = request.headers['x-forwarded-for'] || request.ip;
+
     const errorInfo = {
       headers: request.headers,
       query: request.query,
       body: request.body,
       params: request.params,
       timestamp: new Date().toISOString(),
-      ip: requestIp.getClientIp(request), // IP信息
+      ip: clientIp,
       exception: exception['name'],
       error: errorMessage,
     };
 
-    // TODO：使用工具类统一
     const responseBody = {
       success: false,
       errorCode: httpStatus,
@@ -51,7 +51,6 @@ export class AllExceptionFilter implements ExceptionFilter {
           ? exception.getResponse()
           : 'Internal server error',
       showType: ErrorShowType.ERROR_MESSAGE,
-      data: null,
     };
 
     this.logger.error('[AllExceptionFilter]', errorInfo);
