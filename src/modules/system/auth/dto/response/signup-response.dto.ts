@@ -15,6 +15,6 @@ export class SignupResponseDto {
   @Transform(({ value }) => {
     return value.map((item) => item.roleId);
   })
-  @Expose({ name: 'UserRole' })
+  @Expose({ name: 'roles' })
   roles: any;
 }

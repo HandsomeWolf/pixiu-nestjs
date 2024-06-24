@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import * as Joi from 'joi';
+import Joi from 'joi';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -56,8 +56,8 @@ import { ConfigModule } from '@nestjs/config';
             then: Joi.required(),
             otherwise: Joi.optional(),
           }),
-        ROLE_DEFAULT_ID: Joi.number().default(4), // 角色配置
-        ROLE_WHITELIST_ID: Joi.string().default('2'),
+        ROLE_DEFAULT_ID: Joi.number().default(2), // 角色配置
+        ROLE_WHITELIST_ID: Joi.string().default('1'),
       }),
     }),
   ],

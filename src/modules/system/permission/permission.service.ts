@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { CreatePermissionDto } from '@/modules/system/permission/dto/required/create-permission.dto';
 import { UpdatePermissionDto } from '@/modules/system/permission/dto/required/update-permission.dto';
 import { PermissionRepository } from '@/modules/system/permission/permission.repository';
-import { Pagination } from '@/common/decorators/pagination.decorator';
 import { IPagination } from '@/common/interface/pagination.interface';
 
 @Injectable()
@@ -12,8 +11,21 @@ export class PermissionService {
     return this.permissionRepository.create(dto);
   }
 
-  findAll(pagination: IPagination) {
-    return this.permissionRepository.findAll(pagination);
+  async findAllWithPagination(pagination: IPagination) {
+    const [permissions, totalCount] = await Promise.all([
+      this.permissionRepository.findAllWithPagination(pagination),
+      this.permissionRepository.countPermissions(),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / pagination.take);
+
+    return {
+      permissions,
+      totalCount,
+      totalPages,
+      page: pagination.current,
+      pageSize: pagination.pageSize,
+    };
   }
 
   findOne(id: number) {
@@ -30,5 +42,9 @@ export class PermissionService {
 
   delete(id: number) {
     return this.permissionRepository.delete(id);
+  }
+
+  async findNamesByIds(permissionIds: number[]) {
+    return this.permissionRepository.findNamesByIds(permissionIds);
   }
 }

@@ -5,6 +5,7 @@ import argon2 from 'argon2';
 import { IPagination } from '@/common/interface/pagination.interface';
 import { QueryUserDto } from '@/modules/system/user/dto/request/query-user.dto';
 import { UpdateProfileDto } from '@/modules/system/user/dto/request/update-profile.dto';
+import { QueryProfileDto } from '@/modules/system/user/dto/request/query-profile.dto';
 
 @Injectable()
 export class UserRepository {
@@ -104,27 +105,70 @@ export class UserRepository {
     return count > 0;
   }
 
-  findOneByUsername(username: string) {
+  async findUserInfo(id: number) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        createdAt: true,
+        profile: {
+          select: {
+            nickname: true,
+            email: true,
+            phone: true,
+            avatar: true,
+            expired: true,
+          },
+        },
+        roles: {
+          select: {
+            role: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+  findUserWithRoleIdsByUsername(username: string) {
     return this.prisma.user.findUnique({
       where: { username },
       include: {
         roles: {
-          include: {
-            role: true,
+          select: {
+            roleId: true,
           },
         },
       },
     });
   }
 
-  async findAll(pagination: IPagination, dto: QueryUserDto) {
+  /**
+   * 计算用户数量。
+   * 这个方法的存在是为了提供关于用户数量的即时信息，而不需要加载所有用户的数据。
+   */
+  async countUsers() {
+    return this.prisma.user.count();
+  }
+
+  async findUsersWithProfileWithRoles(
+    pagination: IPagination,
+    userDto: QueryUserDto,
+    profileDto: QueryProfileDto,
+  ) {
     const { skip, take } = pagination;
-    const { username, roleId, phone, gender } = dto;
+    const { username, roleIds } = userDto;
     return this.prisma.user.findMany({
       where: {
         username: { contains: username },
-        roles: { some: { roleId } },
-        profile: { phone, gender },
+        roles: {
+          some: { roleId: { in: roleIds } },
+        },
+        profile: profileDto,
       },
       skip,
       take,
@@ -134,13 +178,7 @@ export class UserRepository {
             role: true,
           },
         },
-        profile: {
-          select: {
-            id: true,
-            gender: true,
-            phone: true,
-          },
-        },
+        profile: true,
       },
     });
   }
@@ -157,25 +195,7 @@ export class UserRepository {
     });
   }
 
-  async findOne(username: string) {
-    return this.prisma.user.findUnique({
-      where: { username },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: true,
-                menus: true,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  async findOneByUsernameWithRolesAndPermissions(username: string) {
+  async findUserWithRolesWithPermissionsByUsername(username: string) {
     return this.prisma.user.findUnique({
       where: { username },
       include: {

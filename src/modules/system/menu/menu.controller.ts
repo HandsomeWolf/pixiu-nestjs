@@ -25,20 +25,8 @@ export class MenuController {
   }
 
   @Get()
-  findAll(
-    @Pagination() pagination: IPagination,
-    @Query('args')
-    args: any,
-  ) {
-    let parsedArgs;
-    if (args) {
-      try {
-        parsedArgs = JSON.parse(args);
-      } catch (error) {
-        throw new BadRequestException('args: 无效的JSON数据格式');
-      }
-    }
-    return this.menuService.findAll(pagination, parsedArgs);
+  findAll() {
+    return this.menuService.findAll();
   }
 
   @Get(':id')

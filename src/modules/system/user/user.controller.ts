@@ -30,12 +30,19 @@ import { Pagination } from '@/common/decorators/pagination.decorator';
 import { IPagination } from '@/common/interface/pagination.interface';
 import { QueryUserDto } from '@/modules/system/user/dto/request/query-user.dto';
 import { UpdateProfileDto } from '@/modules/system/user/dto/request/update-profile.dto';
+import { UserListResponseDto } from '@/modules/system/user/dto/response/user-list-response.dto';
+import { PaginationService } from '@/common/services/pagination.service';
+import { successResponse } from '@/utils/response.utils';
+import { QueryProfileDto } from '@/modules/system/user/dto/request/query-profile.dto';
 
 @Controller('system/user')
 // @UseGuards(AuthGuard('jwt'), RolePermissionGuard, PolicyGuard)
 // @Permission('systemUser')
 export class UserController {
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private paginationService: PaginationService,
+  ) {}
 
   @Post()
   // @CreatePermission()
@@ -46,15 +53,41 @@ export class UserController {
 
   @Get()
   // @ReadPermission()
-  @Serialize(PublicUserDto)
-  findAll(@Pagination() pagination: IPagination, @Query() dto: QueryUserDto) {
-    return this.userService.findAll(pagination, dto);
+  @Serialize(UserListResponseDto)
+  async findAll(
+    @Pagination() pagination: IPagination,
+    @Query() userDto: QueryUserDto,
+    @Query() profileDto: QueryProfileDto,
+  ) {
+    // return this.userService.findUsersWithProfileWithRoles(pagination, dto);
+    // const { data, total } = await this.paginationService.paginate({
+    //   model: 'user',
+    //   paginationOptions: pagination,
+    //   where: dto,
+    //   includeOrSelect: {
+    //     include: {
+    //       roles: {
+    //         include: {
+    //           role: true,
+    //         },
+    //       },
+    //       profile: true,
+    //     },
+    //   },
+    // });
+    const { data, total } =
+      await this.userService.findUsersWithProfileWithRoles(
+        pagination,
+        userDto,
+        profileDto,
+      );
+    return successResponse(data, total);
   }
 
   @Get(':username')
   // @ReadPermission()
   findOne(@Param('username') username: string) {
-    return this.userService.findOne(username);
+    return this.userService.findUserWithRoleIdsByUsername(username);
   }
 
   @Patch()

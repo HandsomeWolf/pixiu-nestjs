@@ -27,7 +27,6 @@ model User {
   loginAt   DateTime?
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   profile UserProfile?
   logs    Log[]
@@ -46,9 +45,6 @@ model UserProfile {
   gender   Int?
   remark   String? //@db.VarChar(255)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
   user   User @relation(fields: [userId], references: [id])
   userId Int  @unique
 
@@ -61,7 +57,6 @@ model Role {
   status      Int      @default(1) // 0: 禁用, 1: 激活
   description String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
   users       UserRoleRelation[]
   menus       RoleMenuRelation[]
@@ -122,7 +117,6 @@ model Policy {
   @@map("policy")
 }
 
-// Role -> Policy 角色所拥有的策略权限
 model RolePolicyRelation {
   roleId   Int
   policyId Int
@@ -145,7 +139,6 @@ model PermissionPolicyRelation {
   @@map("permission_polices_relation")
 }
 
-// 这里是与菜单表的关系定义
 model RoleMenuRelation {
   roleId Int
   menuId Int
@@ -157,41 +150,42 @@ model RoleMenuRelation {
 }
 
 model Menu {
-  id        Int     @id @default(autoincrement())
-  name      String  @unique
-  path      String
-  component String?
-
-  parentId Int?
-  children Menu[] @relation("menu_relation")
-  parent   Menu?  @relation("menu_relation", fields: [parentId], references: [id], onDelete: Cascade)
-
-  meta  MenuMeta?
-  roles RoleMenuRelation[]
+  id         Int                @id @default(autoincrement())
+  name       String
+  key        String             @unique
+  status     Int                @default(1) // 1正常 0停用
+  path       String // 菜单项的路径，可以是内部路由的路径，也可以是外部链接。
+  component  String?
+  locale     String? // 用于国际化的 key。如果设置为字符串，它将作为翻译的 key 来查找对应的文本。如果设置为 false，则不应用国际化。
+  parentId   Int?
+  parentKeys String? // 定义当此菜单项被选中时也应该被选中的父菜单项的 key 数组。这对于确保嵌套菜单的父项在子项被选中时能正确高亮很有用。
+  children   Menu[]             @relation("menu_relation")
+  parent     Menu?              @relation("menu_relation", fields: [parentId], references: [id], onDelete: Cascade)
+  sortOrder  Int                @default(500)
+  meta       MenuMeta?
+  roles      RoleMenuRelation[]
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@map("menus")
 }
 
 model MenuMeta {
-  id Int @id @default(autoincrement())
-
-  query     String?
-  icon      String?
-  sortOrder Int     @default(500)
-
-  // type       Int // 0:目录 1:菜单 2:按钮
-  status     Int     @default(1) // 菜单状态（0停用 1正常）
-  noClosable Int     @default(0)
-  hidden     Int     @default(0) // 是否隐藏（0显示 1隐藏）
-  activeMenu String?
-  guard      String?
-  dot        Int     @default(0)
-  badge      String?
-  isFrame    Int? // 是否为外链  0:否 1:是
-  isCache    Int     @default(0) // 是否缓存 0:否 1:是
+  id                 Int     @id @default(autoincrement())
+  hideChildrenInMenu Int? // 如果设置为 true，则在菜单中隐藏此菜单项的所有子节点，但不隐藏菜单项本身。
+  hideInMenu         Int? // 如果设置为 true，则在菜单中隐藏此菜单项及其所有子节点。
+  icon               String? // 定义菜单项的图标。可以是任何 React 节点，例如来自 Ant Design 的 Icon 组件。
+  disabled           Int // 菜单状态（0正常 1停用）如果设置为 true，则禁用此菜单项。
+  disabledTooltip    Int? // 如果设置为 true，当菜单项被禁用时，不显示 tooltip。
+  flatMenu           Int? // 如果设置为 true，则隐藏此菜单项，并将其所有子节点提升到与此菜单项平级显示。
+  target             String? // 定义打开链接的方式，同 <a> 标签的 target 属性，例如 _blank 以在新标签页中打开链接。
+  tooltip            String? // 定义当鼠标悬停在菜单项上时显示的 tooltip 文本。
+  noClosable         Int? // 如果设置为 true，该菜单顶部选项卡不可被关闭
+  query              String?
+  guard              String?
+  dot                Int?
+  badge              String?
+  isCache            Int? // 是否缓存 0:否 1:是
 
   menuId Int  @unique
   menu   Menu @relation(fields: [menuId], references: [id])
@@ -223,7 +217,6 @@ model DictionaryCategory {
   status      Int     @default(1)
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   dictionaryData DictionaryData[]
 
@@ -239,7 +232,6 @@ model DictionaryData {
   status      Int     @default(1)
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   categoryId Int
   category   DictionaryCategory @relation(fields: [categoryId], references: [id])

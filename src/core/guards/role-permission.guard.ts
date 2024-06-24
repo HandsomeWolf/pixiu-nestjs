@@ -2,14 +2,14 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSION_KEY } from '../decorators/role-permission.decorator';
 import { ConfigService } from '@nestjs/config';
-import { UserRepository } from '@/modules/system/user/user.repository';
 import { RoleService } from '@/modules/system/role/role.service';
+import { UserService } from '@/modules/system/user/user.service';
 
 @Injectable()
 export class RolePermissionGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private userRepository: UserRepository,
+    private userService: UserService,
     private roleService: RoleService,
     private configService: ConfigService,
   ) {}
@@ -34,7 +34,7 @@ export class RolePermissionGuard implements CanActivate {
     const req = context.switchToHttp().getRequest();
     const { username } = req.user;
     const user =
-      await this.userRepository.findOneByUsernameWithRolesAndPermissions(
+      await this.userService.findUserWithRolesWithPermissionsByUsername(
         username,
       );
     if (!user) {

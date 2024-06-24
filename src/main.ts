@@ -31,14 +31,14 @@ async function bootstrap() {
     type: VersioningType.URI,
     defaultVersion: version,
   });
-  if (cors === 'true') {
+  if (cors === true) {
     app.enableCors();
   }
   if (errorFilterEnabled === true) {
     const httpAdapter = app.get(HttpAdapterHost);
     app.useGlobalFilters(
       new AllExceptionFilter(httpAdapter),
-      new HttpExceptionFilter(Logger),
+      new HttpExceptionFilter(httpAdapter),
       new PrismaExceptionFilter(),
     );
   }

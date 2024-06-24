@@ -44,38 +44,20 @@ export class PermissionRepository {
     });
   }
 
-  async findAll(pagination: IPagination) {
-    const { skip, take, current, pageSize } = pagination;
+  async findAllWithPagination(pagination: IPagination) {
+    const { skip, take } = pagination;
+    return this.prisma.permission.findMany({
+      skip,
+      take,
+    });
+  }
 
-    // 构建查询条件，仅当值存在时才添加到where子句中
-    // const where = {};
-    // if (dto.name) {
-    //   where['name'] = {
-    //     contains: dto.name,
-    //   };
-    // }
-    // if (dto.status) {
-    //   where['status'] = dto.status;
-    // }
+  async countPermissions() {
+    return this.prisma.permission.count();
+  }
 
-    const [roles, total] = await Promise.all([
-      this.prisma.role.findMany({
-        // where,
-        skip,
-        take,
-      }),
-      this.prisma.role.count({
-        // where,
-      }),
-    ]);
-
-    // 返回数据和分页信息
-    return {
-      data: roles,
-      total,
-      current,
-      pageSize,
-    };
+  async findAll() {
+    return this.prisma.role.findMany();
   }
 
   async findOne(id: number) {
@@ -93,6 +75,19 @@ export class PermissionRepository {
             policy: true,
           },
         },
+      },
+    });
+  }
+
+  async findNamesByIds(ids: number[]) {
+    return this.prisma.permission.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      select: {
+        name: true,
       },
     });
   }

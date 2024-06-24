@@ -9,6 +9,7 @@ import {
 import { HttpAdapterHost } from '@nestjs/core';
 
 import * as requestIp from 'request-ip';
+import { ErrorShowType } from '@/core/enum/type.enum';
 
 @Catch()
 export class AllExceptionFilter implements ExceptionFilter {
@@ -27,23 +28,33 @@ export class AllExceptionFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const msg: unknown =
+    const errorMessage: unknown =
       exception['response'] || exception['message'] || 'Internal Server Error';
 
-    const responseBody = {
+    const errorInfo = {
       headers: request.headers,
       query: request.query,
       body: request.body,
       params: request.params,
       timestamp: new Date().toISOString(),
-      // 还可以加入一些用户信息
-      // IP信息
-      ip: requestIp.getClientIp(request),
+      ip: requestIp.getClientIp(request), // IP信息
       exception: exception['name'],
-      error: msg,
+      error: errorMessage,
     };
 
-    this.logger.error('[allExceptionFilter]', responseBody);
+    // TODO：使用工具类统一
+    const responseBody = {
+      success: false,
+      errorCode: httpStatus,
+      errorMessage:
+        exception instanceof HttpException
+          ? exception.getResponse()
+          : 'Internal server error',
+      showType: ErrorShowType.ERROR_MESSAGE,
+      data: null,
+    };
+
+    this.logger.error('[AllExceptionFilter]', errorInfo);
     httpAdapter.reply(response, responseBody, httpStatus);
   }
 }

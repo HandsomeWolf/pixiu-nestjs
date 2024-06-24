@@ -5,7 +5,7 @@ export class QueryUserDto {
   username: string;
 
   @IsOptional()
-  roleId: number;
+  roleIds: number[];
 
   @IsOptional()
   phone: string;
@@ -14,5 +14,14 @@ export class QueryUserDto {
   gender: number;
 
   @IsOptional()
-  email: number;
+  email: string;
+
+  @IsOptional()
+  status: number;
+
+  @IsOptional()
+  startTime: string;
+
+  @IsOptional()
+  endTime: string;
 }

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `menus` ADD COLUMN `status` INTEGER NOT NULL DEFAULT 1;

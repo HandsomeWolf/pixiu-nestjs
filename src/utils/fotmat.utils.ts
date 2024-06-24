@@ -101,3 +101,32 @@ export function toBoolean(value: unknown): boolean {
   }
   return false;
 }
+
+export function cleanData(obj: any): any {
+  if (Array.isArray(obj)) {
+    // 如果是数组，递归清理每个元素，然后过滤掉空数组和值为0的元素
+    return obj
+      .map(cleanData)
+      .filter(
+        (item) => item !== null && !(Array.isArray(item) && item.length === 0),
+      );
+  } else if (obj !== null && typeof obj === 'object') {
+    // 特别处理日期类型，避免将日期转换成空对象
+    if (obj instanceof Date) {
+      return obj;
+    }
+    // 如果是对象，递归清理每个键值对
+    return Object.fromEntries(
+      Object.entries(obj)
+        .map(([key, value]) => [key, cleanData(value)]) // 递归调用
+        .filter(
+          ([, value]) =>
+            value !== null &&
+            value !== 0 &&
+            !(Array.isArray(value) && value.length === 0),
+        ), // 过滤掉值为null、0或空数组的键值对
+    );
+  }
+  // 对于基本类型和非null值，直接返回
+  return obj;
+}

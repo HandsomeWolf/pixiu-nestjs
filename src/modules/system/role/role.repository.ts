@@ -67,7 +67,7 @@ export class RoleRepository {
     return count > 0;
   }
 
-  async findAllByExistingRoles(roleIds: number[]) {
+  async findRoleIdsByIds(roleIds: number[]) {
     return this.prisma.role.findMany({
       where: {
         id: {
@@ -76,6 +76,104 @@ export class RoleRepository {
       },
       select: {
         id: true,
+      },
+    });
+  }
+
+  findPermissionIdsByRoleIds(roleIds: number[]) {
+    return this.prisma.role.findMany({
+      where: {
+        id: {
+          in: roleIds,
+        },
+      },
+      include: {
+        permissions: {
+          select: {
+            permissionId: true,
+          },
+        },
+      },
+    });
+  }
+
+  findMenuIdsByRoleIds(roleIds: number[]) {
+    return this.prisma.role.findMany({
+      where: {
+        id: {
+          in: roleIds,
+        },
+      },
+      include: {
+        menus: {
+          select: {
+            menuId: true,
+          },
+        },
+      },
+    });
+  }
+
+  findPermissionIdsWithMenuIdsByIds(roleIds: number[]) {
+    return this.prisma.role.findMany({
+      where: {
+        id: {
+          in: roleIds,
+        },
+      },
+      include: {
+        permissions: {
+          select: {
+            permissionId: true,
+          },
+        },
+        menus: {
+          select: {
+            menuId: true,
+          },
+        },
+      },
+    });
+  }
+
+  findPermissionsWithMenusByRoleIds(roleIds: number[]) {
+    return this.prisma.role.findMany({
+      where: {
+        id: {
+          in: roleIds,
+        },
+      },
+      include: {
+        permissions: {
+          include: {
+            permission: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        menus: {
+          include: {
+            menu: {
+              select: {
+                id: true,
+                name: true,
+                path: true,
+                meta: true,
+                children: {
+                  select: {
+                    id: true,
+                    name: true,
+                    path: true,
+                    meta: true,
+                    children: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
   }

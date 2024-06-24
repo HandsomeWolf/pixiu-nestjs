@@ -6,6 +6,8 @@ import {
   Param,
   Patch,
   Post,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { PermissionService } from '@/modules/system/permission/permission.service';
 import { Serialize } from '@/core/decorators/serialize.decorator';
@@ -14,6 +16,8 @@ import { PublicUpdatePermissionDto } from '@/modules/system/permission/dto/respo
 import { UpdatePermissionDto } from '@/modules/system/permission/dto/required/update-permission.dto';
 import { Pagination } from '@/common/decorators/pagination.decorator';
 import { IPagination } from '@/common/interface/pagination.interface';
+import { AuthGuard } from '@nestjs/passport';
+import { JwtPayload } from '@/modules/system/auth/strategies/jwt-payload.service';
 
 @Controller('permission')
 export class PermissionController {
@@ -26,7 +30,7 @@ export class PermissionController {
 
   @Get()
   findAll(@Pagination() pagination: IPagination) {
-    return this.permissionService.findAll(pagination);
+    return this.permissionService.findAllWithPagination(pagination);
   }
 
   @Get(':id')

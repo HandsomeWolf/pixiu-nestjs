@@ -8,10 +8,10 @@ import {
   IPolicy,
 } from '@/modules/system/policy/casl-ability.service';
 import { PermissionService } from '@/modules/system/permission/permission.service';
-import { UserRepository } from '@/modules/system/user/user.repository';
 import { RoleService } from '@/modules/system/role/role.service';
 import { SharedService } from '@/modules/system/shared/shared.service';
 import { PrismaClient } from '@prisma/client';
+import { UserService } from '@/modules/system/user/user.service';
 
 const prisma = new PrismaClient();
 
@@ -31,7 +31,7 @@ export class PolicyGuard implements CanActivate {
     private reflector: Reflector,
     private configService: ConfigService,
     private permissionService: PermissionService,
-    private userRepository: UserRepository,
+    private userService: UserService,
     private roleService: RoleService,
     private sharedService: SharedService,
   ) {}
@@ -73,7 +73,7 @@ export class PolicyGuard implements CanActivate {
     });
     // 4. username -> User -> Role -> Policy & subjects 用户已分配接口权限
     const user =
-      await this.userRepository.findOneByUsernameWithRolesAndPermissions(
+      await this.userService.findUserWithRolesWithPermissionsByUsername(
         username,
       );
     const roleIds = user.roles.map((role) => role.roleId);
