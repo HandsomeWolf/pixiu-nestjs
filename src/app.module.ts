@@ -4,6 +4,8 @@ import { RedisModule } from '@/core/redis/redis.module';
 import { ConfigurationModule } from '@/core/configuration/configuration.module';
 import { PrismaModule } from '@/core/database/prisma/prisma.module';
 import { SystemModule } from '@/modules/system/system.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -25,6 +27,9 @@ import { SystemModule } from '@/modules/system/system.module';
     PrismaModule,
     RedisModule,
     SystemModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+    }),
   ],
   controllers: [],
   providers: [
