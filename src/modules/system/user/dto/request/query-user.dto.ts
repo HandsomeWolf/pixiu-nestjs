@@ -1,27 +1,51 @@
-import { IsOptional } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsArray,
+  IsInt,
+  IsEmail,
+  Min,
+  Max,
+  IsDateString,
+  IsEnum,
+} from 'class-validator';
+
+enum Gender {
+  Male = 0,
+  Female = 1,
+}
 
 export class QueryUserDto {
   @IsOptional()
-  username: string;
+  @IsString()
+  username?: string;
 
   @IsOptional()
-  roleIds: number[];
+  @IsArray()
+  @IsInt({ each: true })
+  roleIds?: number[];
 
   @IsOptional()
-  phone: string;
+  @IsString()
+  phone?: string;
 
   @IsOptional()
-  gender: number;
+  @IsEnum(Gender, { message: 'gender 必须是 0 或 1' })
+  gender?: Gender;
 
   @IsOptional()
-  email: string;
+  @IsEmail()
+  email?: string;
 
   @IsOptional()
-  status: number;
+  @IsInt()
+  status?: number;
 
   @IsOptional()
-  startTime: string;
+  @IsDateString()
+  startTime?: string;
 
   @IsOptional()
-  endTime: string;
+  @IsDateString()
+  endTime?: string;
 }
